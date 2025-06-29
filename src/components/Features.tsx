@@ -26,7 +26,7 @@ const Features: React.FC = () => {
 
   return (
     <section className="py-12 bg-gradient-to-br from-[#F4F1E9] via-white to-[#B1D182]/10">
-      <div className="mx-auto px-4 w-full max-w-7xl"> {/* Increased max-width */}
+      <div className="mx-auto px-4 w-full max-w-9xl"> {/* Increased max-width */}
         <div className="text-center">
           {/* Logo */}
           <div className="mb-10">
@@ -51,10 +51,10 @@ const Features: React.FC = () => {
                     key={index}
                     className="flex flex-col items-center p-2 group min-w-[100px]" /* Compact cards */
                   >
-                    <div className="w-12 h-12 rounded-full bg-[#688F4E]/10 flex items-center justify-center mb-2 group-hover:bg-[#688F4E]/20 transition-colors duration-300">
-                      <Icon className="w-5 h-5 text-[#688F4E]" />
+                    <div className="w-16 h-16 rounded-full bg-[#688F4E]/10 flex items-center justify-center mb-2 group-hover:bg-[#688F4E]/20 transition-colors duration-300">
+                      <Icon className="w-12 h-12 text-[#688F4E]" />
                     </div>
-                    <span className="text-sm font-medium text-[#2B463C] text-center leading-tight">
+                    <span className="text-xl font-medium text-[#2B463C] text-center leading-tight">
                       {feature.name}
                     </span>
                   </div>

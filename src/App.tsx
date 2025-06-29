@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import ProductGrid from './components/ProductGrid';
@@ -6,13 +7,12 @@ import Features from './components/Features';
 import Cart, { CartItem } from './components/Cart';
 import Footer from './components/Footer';
 import { Product } from './components/ProductCard';
-
 import HomePage from './components/pages/HomePage';
+import AboutPage from './components/pages/AboutPage'; // You'll need to create this
 
 function App() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
-
   const products: Product[] = [
     {
       id: 'strawberry',
@@ -109,21 +109,29 @@ function App() {
   const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
   return (
-    <div className="min-h-screen bg-white">
-      <HomePage/>
-      {/* <Header cartCount={cartCount} onCartClick={() => setIsCartOpen(true)} />
-      <Hero />
-      <ProductGrid onAddToCart={handleAddToCart} />
-      <Features />
-      <Footer />
-      <Cart
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-        items={cartItems}
-        onUpdateQuantity={handleUpdateQuantity}
-        onRemoveItem={handleRemoveItem}
-      /> */}
-    </div>
+    <Router>
+      <div className="min-h-screen bg-white">
+        <Header cartCount={cartCount} onCartClick={() => setIsCartOpen(true)} />
+        
+        <Routes>
+          <Route path="/" element={
+            <>
+              <HomePage />
+            </>
+          } />
+          <Route path="/about" element={<AboutPage />} />
+        </Routes>
+        
+        <Footer />
+        <Cart
+          isOpen={isCartOpen}
+          onClose={() => setIsCartOpen(false)}
+          items={cartItems}
+          onUpdateQuantity={handleUpdateQuantity}
+          onRemoveItem={handleRemoveItem}
+        />
+      </div>
+    </Router>
   );
 }
 

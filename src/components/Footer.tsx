@@ -242,9 +242,9 @@ const Footer: React.FC = () => {
               </a>
             </div>
             <div className="flex items-center space-x-2 text-white/80">
-              <span>Made with</span>
-              <Heart className="w-4 h-4 text-red-400 animate-pulse" />
-              <span>in India</span>
+              <a href="https://pixelatenest.com" target="_blank" rel="noopener noreferrer" className="text-sm hover:text-white transition-colors duration-200">
+               Developed by Pixelate Nest</a>
+              
             </div>
           </div>
         </div>
