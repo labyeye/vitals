@@ -7,6 +7,8 @@ import Cart, { CartItem } from './components/Cart';
 import Footer from './components/Footer';
 import { Product } from './components/ProductCard';
 
+import HomePage from './components/pages/HomePage';
+
 function App() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -108,7 +110,8 @@ function App() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header cartCount={cartCount} onCartClick={() => setIsCartOpen(true)} />
+      <HomePage/>
+      {/* <Header cartCount={cartCount} onCartClick={() => setIsCartOpen(true)} />
       <Hero />
       <ProductGrid onAddToCart={handleAddToCart} />
       <Features />
@@ -119,7 +122,7 @@ function App() {
         items={cartItems}
         onUpdateQuantity={handleUpdateQuantity}
         onRemoveItem={handleRemoveItem}
-      />
+      /> */}
     </div>
   );
 }
