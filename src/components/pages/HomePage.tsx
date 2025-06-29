@@ -1,9 +1,9 @@
-import Header from "../Header";
-import Hero from "../Hero";
-import Footer from "../Footer";
-import ProductGrid from "../ProductGrid";
-import Features from "../Features";
-import Reviews from "../Review";
+import Header from "../Home/Header";
+import Hero from "../Home/Hero";
+import Footer from "../Home/Footer";
+import ProductGrid from "../Home/ProductGrid";
+import Features from "../Home/Features";
+import Reviews from "../Home/Review";
 
 const HomePage = () => {
     return(

@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { ShoppingCart, Menu, X, Search, Heart, User } from "lucide-react";
-import bg from "../assets/images/bg-navbar.jpg";
-import logo from "../assets/images/logoblack.png";
+import logo from "../../assets/images/logoblack.png";
 
 interface HeaderProps {
   cartCount: number;
@@ -24,25 +23,25 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick }) => {
           <div className="flex items-center space-x-8 ml-[-290px]">
             <nav className="hidden md:flex items-center space-x-8">
               <a
-                href="#home"
+                href="home"
                 className="text-BLACK text-xl hover:text-[#688F4E] transition-colors duration-300 font-large"
               >
                 Home
               </a>
               <a
-                href="#products"
+                href="products"
                 className="text-BLACK text-xl hover:text-[#688F4E] transition-colors duration-300 font-large"
               >
                 Products
               </a>
               <a
-                href="#about"
+                href="about"
                 className="text-BLACK text-xl hover:text-[#688F4E] transition-colors duration-300 font-large"
               >
                 About
               </a>
               <a
-                href="#contact"
+                href="contact"
                 className="text-BLACK text-xl hover:text-[#688F4E] transition-colors duration-300 font-large"
               >
                 Contact

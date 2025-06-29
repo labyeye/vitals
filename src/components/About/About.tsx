@@ -1,6 +1,5 @@
 import React from 'react';
-import { Leaf, Globe, Zap, Award, Shield, Heart } from 'lucide-react';
-import Header from '../Header';
+import { Leaf, Globe, Zap, Award, Heart } from 'lucide-react';
 
 const About: React.FC = () => {
   return (
