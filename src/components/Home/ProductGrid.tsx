@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import ProductCard, { Product } from "./ProductCard";
-import { Filter, Search, SlidersHorizontal } from "lucide-react";
+import {Search, SlidersHorizontal } from "lucide-react";
 
 interface ProductGridProps {
   onAddToCart: (
