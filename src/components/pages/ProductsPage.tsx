@@ -1,9 +1,8 @@
 import React, { useState } from "react";
 import Header from "../Home/Header";
 import ProductGrid from "../Home/ProductGrid";
-import Features from "../Home/Features";
 import Reviews from "../Home/Review";
-import Footer from "../Home/Footer";
+
 import Cart from "../Home/Cart";
 
 const ProductPage: React.FC = () => {
@@ -19,6 +18,10 @@ const ProductPage: React.FC = () => {
     const productToAdd = products.find((p) => p.id === productId);
 
     if (!productToAdd) return;
+
+    // Get the price or default to 0 if not found (though this shouldn't happen with valid packSize)
+    const itemPrice =
+      productToAdd.price[packSize as keyof typeof productToAdd.price] ?? 0;
 
     const existingItemIndex = cartItems.findIndex(
       (item) => item.id === productId && item.packSize === packSize
@@ -38,8 +41,7 @@ const ProductPage: React.FC = () => {
           name: productToAdd.name,
           packSize,
           quantity,
-          price:
-            productToAdd.price[packSize as keyof typeof productToAdd.price],
+          price: itemPrice,
           image: productToAdd.image,
         },
       ]);
