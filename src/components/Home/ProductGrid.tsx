@@ -147,7 +147,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({ onAddToCart }) => {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-16">
-          <h2 className="text-4xl sm:text-5xl font-bold mb-6">
+          <h2 className="text-4xl sm:text-5xl font-bold mb-6 mt-10">
             <span className="bg-gradient-to-r from-[#2B463C] to-[#688F4E] bg-clip-text text-transparent">
               Our Products
             </span>
@@ -333,18 +333,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({ onAddToCart }) => {
         )}
       </div>
 
-      <style jsx>{`
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
+      
     </section>
   );
 };

@@ -9,6 +9,7 @@ import Footer from "./components/Home/Footer";
 import { Product } from "./components/Home/ProductCard";
 import HomePage from "./components/pages/HomePage";
 import AboutPage from "./components/pages/AboutPage"; // You'll need to create this
+import ProductPage from "./components/pages/ProductsPage";
 
 function App() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -159,6 +160,7 @@ function App() {
             }
           />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/products" element={<ProductPage />} />
         </Routes>
 
         <Footer />
