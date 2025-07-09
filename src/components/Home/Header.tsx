@@ -35,14 +35,6 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick }) => {
               >
                 Products
               </a>
-              
-              
-              <a
-                href="updates"
-                className="text-black text-sm lg:text-base xl:text-m hover:text-[#688F4E] transition-colors duration-300 font-medium"
-              >
-                Updates
-              </a>
               <a
                 href="blogs"
                 className="text-black text-sm lg:text-base xl:text-m hover:text-[#688F4E] transition-colors duration-300 font-medium"
