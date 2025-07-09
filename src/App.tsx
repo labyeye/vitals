@@ -4,15 +4,16 @@ import Header from "./components/Home/Header";
 import Cart, { CartItem } from "./components/Home/Cart";
 import Footer from "./components/Home/Footer";
 import HomePage from "./components/pages/HomePage";
-import AboutPage from "./components/pages/AboutPage"; // You'll need to create this
+import AboutPage from "./components/pages/AboutPage";
 import ProductPage from "./components/pages/ProductsPage";
 import ContactPage from "./components/pages/ContactPage";
+import UpdatesPage from "./components/pages/UpdatesPage";
+import BlogsPage from "./components/pages/BlogsPage";
 
 function App() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
  
-
 
   const handleUpdateQuantity = (cartItemId: string, newQuantity: number) => {
     if (newQuantity === 0) {
@@ -52,6 +53,8 @@ function App() {
           />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/products" element={<ProductPage />} />
+          <Route path="/updates" element={<UpdatesPage />} />
+          <Route path="/blogs" element={<BlogsPage />} />
           <Route path="/contact" element={<ContactPage />} />
         </Routes>
 
