@@ -77,9 +77,9 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick }) => {
             <button className="p-1 lg:p-1.5 xl:p-2 text-black hover:text-[#688F4E] transition-colors duration-300 hover:bg-[#F4F1E9] rounded-full">
               <Heart className="w-5 h-5 lg:w-6 lg:h-6 xl:w-6 xl:h-7" />
             </button>
-            <button className="p-1 lg:p-1.5 xl:p-2 text-black hover:text-[#688F4E] transition-colors duration-300 hover:bg-[#F4F1E9] rounded-full">
+            <a href="/profile" className="p-1 lg:p-1.5 xl:p-2 text-black hover:text-[#688F4E] transition-colors duration-300 hover:bg-[#F4F1E9] rounded-full">
               <User className="w-5 h-5 lg:w-6 lg:h-6 xl:w-6 xl:h-7" />
-            </button>
+            </a>
             <button
               onClick={onCartClick}
               className="relative p-1 lg:p-1.5 xl:p-2 text-black hover:text-[#688F4E] transition-all duration-300 hover:bg-[#F4F1E9] rounded-full group"
@@ -172,9 +172,9 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick }) => {
                 <button className="p-1 text-[#2B463C] hover:text-[#688F4E] transition-colors duration-300">
                   <Heart className="w-4 h-4" />
                 </button>
-                <button className="p-1 text-[#2B463C] hover:text-[#688F4E] transition-colors duration-300">
+                <a href="/profile" className="p-1 text-[#2B463C] hover:text-[#688F4E] transition-colors duration-300">
                   <User className="w-4 h-4" />
-                </button>
+                </a>
               </div>
             </nav>
           </div>
