@@ -64,7 +64,7 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick }) => {
             </a>
             <div className="hidden md:flex flex-col justify-center border-l border-[#688F4E] pl-2 lg:pl-3 xl:pl-4">
               <span className="text-base lg:text-lg xl:text-xl font-bold text-[#688F4E] uppercase tracking-wider vertical-rl">
-                Vital
+                Evolv
               </span>
               <span className="text-xs lg:text-xs xl:text-sm text-black mt-0 vertical-rl">
                 Fresh feasts, great treats

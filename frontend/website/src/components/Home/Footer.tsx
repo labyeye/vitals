@@ -53,7 +53,7 @@ const Footer: React.FC = () => {
               <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
                 <span className="text-[#2B463C] font-bold text-lg">V</span>
               </div>
-              <span className="text-2xl font-bold">Vital</span>
+              <span className="text-2xl font-bold">Evolv</span>
             </div>
             <p className="text-white/80 mb-6 leading-relaxed">
               Protein that tastes like dessert. Made in India, formulated for your success. 
@@ -178,7 +178,7 @@ const Footer: React.FC = () => {
               </div>
               <div className="flex items-center space-x-3 text-white/80">
                 <Mail className="w-4 h-4" />
-                <span className="text-sm">hello@vital.in</span>
+                <span className="text-sm">hello@Evolv.in</span>
               </div>
               <div className="flex items-center space-x-3 text-white/80">
                 <MapPin className="w-4 h-4" />
@@ -228,7 +228,7 @@ const Footer: React.FC = () => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <div className="flex items-center space-x-2 text-white/80">
-              <span>&copy; {currentYear} Vital Protein Shakes. All rights reserved.</span>
+              <span>&copy; {currentYear} Evolv Protein Shakes. All rights reserved.</span>
             </div>
             <div className="flex items-center space-x-6">
               <a href="#" className="text-white/80 hover:text-white text-sm transition-colors duration-200">
