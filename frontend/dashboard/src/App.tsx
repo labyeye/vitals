@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Sidebar from './components/Sidebar';
 import Overview from './components/Overview';
 import Customers from './components/Customers';
@@ -10,15 +11,40 @@ import ProductDetails from './components/ProductDetails';
 import CustomerDetails from './components/CustomerDetails';
 import OrderDetails from './components/OrderDetails';
 import CampaignDetails from './components/CampaignDetails';
+import Login from './components/Login';
 import { mockData } from './data/mockData';
 
-function App() {
+function DashboardApp() {
+  const { user, logout } = useAuth();
   const [activeSection, setActiveSection] = useState('overview');
   const [currentView, setCurrentView] = useState<{
     section: string;
     view: 'list' | 'add' | 'details';
     itemId?: string;
   }>({ section: 'overview', view: 'list' });
+
+  // If not authenticated, show login
+  if (!user) {
+    return <Login />;
+  }
+
+  // If not admin, show access denied
+  if (user.role !== 'admin') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
+          <p className="text-gray-600 mb-4">You don't have permission to access the admin dashboard.</p>
+          <button
+            onClick={logout}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Logout
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const renderContent = () => {
     // Handle detailed views
@@ -147,6 +173,14 @@ function App() {
         {renderContent()}
       </main>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <DashboardApp />
+    </AuthProvider>
   );
 }
 

@@ -48,6 +48,26 @@ const userSchema = new mongoose.Schema({
       default: 'USA'
     }
   },
+  // Add these to the userSchema
+  loyaltyPoints: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  loyaltyTier: {
+    type: String,
+    enum: ['bronze', 'silver', 'gold'],
+    default: 'bronze'
+  },
+  loyaltyHistory: [{
+    date: Date,
+    action: String,
+    points: Number,
+    order: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Order'
+    }
+  }],
   profileImage: {
     type: String,
     default: null
@@ -77,14 +97,14 @@ userSchema.index({ email: 1 });
 userSchema.index({ role: 1 });
 
 // Virtual for full name
-userSchema.virtual('fullName').get(function() {
+userSchema.virtual('fullName').get(function () {
   return `${this.firstName} ${this.lastName}`;
 });
 
 // Pre-save middleware to hash password
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
-  
+
   try {
     const salt = await bcrypt.genSalt(12);
     this.password = await bcrypt.hash(this.password, salt);
@@ -95,12 +115,12 @@ userSchema.pre('save', async function(next) {
 });
 
 // Method to compare password
-userSchema.methods.comparePassword = async function(candidatePassword) {
+userSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
 // Method to get public profile (without sensitive data)
-userSchema.methods.getPublicProfile = function() {
+userSchema.methods.getPublicProfile = function () {
   const userObject = this.toObject();
   delete userObject.password;
   delete userObject.passwordResetToken;
@@ -111,7 +131,7 @@ userSchema.methods.getPublicProfile = function() {
 };
 
 // Static method to find by email
-userSchema.statics.findByEmail = function(email) {
+userSchema.statics.findByEmail = function (email) {
   return this.findOne({ email: email.toLowerCase() });
 };
 

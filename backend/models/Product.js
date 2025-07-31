@@ -79,7 +79,10 @@ const productSchema = new mongoose.Schema({
   variants: [{
     name: String,
     options: [String],
-    price: Number
+    prices: [{
+      size: Number,  
+      price: Number  
+    }]
   }],
   attributes: [{
     name: String,
@@ -137,14 +140,14 @@ const productSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Indexes for better query performance
+
 productSchema.index({ name: 'text', description: 'text' });
 productSchema.index({ category: 1 });
 productSchema.index({ status: 1 });
 productSchema.index({ isFeatured: 1 });
 productSchema.index({ 'stock.quantity': 1 });
 
-// Virtual for discount percentage
+
 productSchema.virtual('discountPercentage').get(function() {
   if (this.comparePrice && this.comparePrice > this.price) {
     return Math.round(((this.comparePrice - this.price) / this.comparePrice) * 100);
@@ -152,19 +155,19 @@ productSchema.virtual('discountPercentage').get(function() {
   return 0;
 });
 
-// Virtual for in stock status
+
 productSchema.virtual('inStock').get(function() {
   if (!this.stock.trackStock) return true;
   return this.stock.quantity > 0;
 });
 
-// Virtual for low stock status
+
 productSchema.virtual('isLowStock').get(function() {
   if (!this.stock.trackStock) return false;
   return this.stock.quantity <= this.stock.lowStockThreshold && this.stock.quantity > 0;
 });
 
-// Method to update stock
+
 productSchema.methods.updateStock = function(quantity, operation = 'decrease') {
   if (!this.stock.trackStock) return;
   
@@ -177,14 +180,14 @@ productSchema.methods.updateStock = function(quantity, operation = 'decrease') {
   return this.save();
 };
 
-// Static method to find active products
+
 productSchema.statics.findActive = function() {
   return this.find({ status: 'active' });
 };
 
-// Static method to find featured products
+
 productSchema.statics.findFeatured = function() {
   return this.find({ status: 'active', isFeatured: true });
 };
 
-module.exports = mongoose.model('Product', productSchema); 
+module.exports = mongoose.model('Product', productSchema);

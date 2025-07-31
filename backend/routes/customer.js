@@ -4,15 +4,38 @@ const { protect, isCustomer } = require('../middleware/auth');
 const Product = require('../models/Product');
 const Order = require('../models/Order');
 const User = require('../models/User');
+const {getLoyaltyPoints, checkTierUpgrade} = require('../controller/loyaltyController');
 
 const router = express.Router();
 
 // Apply customer protection to all routes
 router.use(protect, isCustomer);
 
-// @desc    Get customer dashboard
-// @route   GET /api/customer/dashboard
-// @access  Customer only
+router.get('/loyalty', async (req, res) => {
+  try {
+    const loyaltyDetails = await getLoyaltyDetails(req.user._id);
+    
+    if (!loyaltyDetails) {
+      return res.status(404).json({
+        success: false,
+        message: 'Loyalty account not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: loyaltyDetails
+    });
+  } catch (error) {
+    console.error('Get loyalty details error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching loyalty details'
+    });
+  }
+});
+
+// Update the dashboard route to include loyalty info
 router.get('/dashboard', async (req, res) => {
   try {
     // Get customer's recent orders
@@ -48,9 +71,8 @@ router.get('/dashboard', async (req, res) => {
       }
     ]);
 
-    // Get wishlist items (if implemented)
-    // For now, return empty array
-    const wishlistItems = [];
+    // Get loyalty details
+    const loyaltyDetails = await getLoyaltyDetails(req.user._id);
 
     res.status(200).json({
       success: true,
@@ -58,7 +80,7 @@ router.get('/dashboard', async (req, res) => {
         recentOrders,
         orderStats,
         totalSpent: totalSpent[0]?.total || 0,
-        wishlistItems
+        loyalty: loyaltyDetails
       }
     });
   } catch (error) {

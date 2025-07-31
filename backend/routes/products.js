@@ -26,7 +26,7 @@ router.get('/', async (req, res) => {
 
     // Build query - only active products
     let query = { status: 'active' };
-    
+
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
@@ -56,13 +56,29 @@ router.get('/', async (req, res) => {
       .sort(sortObj)
       .skip(skip)
       .limit(limit);
-
+      const transformedProducts = products.map(product => {
+        const prices = {};
+        // Get prices from variants if they exist
+        if (product.variants && product.variants.length > 0 && product.variants[0].prices) {
+          product.variants[0].prices.forEach(priceObj => {
+            prices[priceObj.size] = priceObj.price;
+          });
+        } else {
+          // Fallback to single price if no variants
+          prices[1] = product.price;
+        }
+      
+        return {
+          ...product.toObject(),
+          prices
+        };
+      });
     const total = await Product.countDocuments(query);
 
     res.status(200).json({
       success: true,
       data: {
-        products,
+        products: transformedProducts,
         pagination: {
           page,
           limit,
@@ -91,9 +107,9 @@ router.get('/featured', async (req, res) => {
       status: 'active',
       isFeatured: true
     })
-    .populate('category', 'name')
-    .sort({ createdAt: -1 })
-    .limit(limit);
+      .populate('category', 'name')
+      .sort({ createdAt: -1 })
+      .limit(limit);
 
     res.status(200).json({
       success: true,
@@ -119,9 +135,9 @@ router.get('/bestsellers', async (req, res) => {
       status: 'active',
       isBestSeller: true
     })
-    .populate('category', 'name')
-    .sort({ createdAt: -1 })
-    .limit(limit);
+      .populate('category', 'name')
+      .sort({ createdAt: -1 })
+      .limit(limit);
 
     res.status(200).json({
       success: true,
@@ -153,20 +169,43 @@ router.get('/:id', async (req, res) => {
       });
     }
 
-    // Get related products (same category)
-    const relatedProducts = await Product.find({
+    const prices = {};
+    if (product.variants && product.variants.length > 0 && product.variants[0].prices) {
+      product.variants[0].prices.forEach(priceObj => {
+        prices[priceObj.size] = priceObj.price;
+      });
+    } else {
+      prices[1] = product.price;
+    }
+    const transformedProduct = {
+      ...product.toObject(),
+      prices
+    }; const relatedProducts = await Product.find({
       _id: { $ne: product._id },
       category: product.category,
       status: 'active'
     })
-    .populate('category', 'name')
-    .limit(4);
+      .populate('category', 'name')
+      .limit(4); const transformedRelated = relatedProducts.map(p => {
+        const relPrices = {};
+        if (p.variants && p.variants.length > 0 && p.variants[0].prices) {
+          p.variants[0].prices.forEach(priceObj => {
+            relPrices[priceObj.size] = priceObj.price;
+          });
+        } else {
+          relPrices[1] = p.price;
+        }
+        return {
+          ...p.toObject(),
+          prices: relPrices
+        };
+      });
 
     res.status(200).json({
       success: true,
       data: {
-        product,
-        relatedProducts
+        product: transformedProduct,
+        relatedProducts: transformedRelated
       }
     });
   } catch (error) {
@@ -200,9 +239,9 @@ router.get('/search', async (req, res) => {
         { tags: { $in: [new RegExp(query, 'i')] } }
       ]
     })
-    .populate('category', 'name')
-    .limit(parseInt(limit))
-    .select('name price images category');
+      .populate('category', 'name')
+      .limit(parseInt(limit))
+      .select('name price images category');
 
     res.status(200).json({
       success: true,
@@ -262,10 +301,10 @@ router.get('/category/:categoryId', async (req, res) => {
       category: req.params.categoryId,
       status: 'active'
     })
-    .populate('category', 'name')
-    .sort({ [sort]: order === 'desc' ? -1 : 1 })
-    .skip(skip)
-    .limit(limit);
+      .populate('category', 'name')
+      .sort({ [sort]: order === 'desc' ? -1 : 1 })
+      .skip(skip)
+      .limit(limit);
 
     const total = await Product.countDocuments({
       category: req.params.categoryId,

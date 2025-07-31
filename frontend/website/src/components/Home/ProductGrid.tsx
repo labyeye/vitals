@@ -1,133 +1,41 @@
 import React, { useState, useMemo } from "react";
 import ProductCard, { Product } from "./ProductCard";
-import {Search, SlidersHorizontal } from "lucide-react";
+import { Search, SlidersHorizontal } from "lucide-react";
 
 interface ProductGridProps {
+  products: Product[];
   onAddToCart: (
     productId: string,
     quantity: number,
-    packSize: keyof Product["price"]
+    packSize: number
   ) => void;
 }
-
-const ProductGrid: React.FC<ProductGridProps> = ({ onAddToCart }) => {
+const ProductGrid: React.FC<ProductGridProps> = ({ products, onAddToCart }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("name");
   const [filterOpen, setFilterOpen] = useState(false);
-
-  const products: Product[] = [
-    {
-      id: "strawberry",
-      name: "Vital Strawberry Protein Shake",
-      flavor: "Strawberry",
-      description:
-        "Your daily protein fix, dressed as a treat. Tastes like dessert, performs like a pro.",
-      image:
-        "https://images.pexels.com/photos/1346347/pexels-photo-1346347.jpeg?auto=compress&cs=tinysrgb&w=400",
-      price: { 1: 149, 6: 799, 12: 1499, 24: 2799 },
-      features: [
-        "25g Complete Protein",
-        "No Added Sugar",
-        "Preservative Free",
-        "Gut Health Support",
-      ],
-      gradient: "from-pink-400 to-red-400",
-      bgGradient: "bg-gradient-to-br from-pink-50 to-red-50",
-    },
-    {
-      id: "chocolate",
-      name: "Vital Chocolate Protein Shake",
-      flavor: "Chocolate",
-      description:
-        "Classic flavour, smarter fuel. Rich taste of real cocoa with 25g of clean, complete protein.",
-      image:
-        "https://images.pexels.com/photos/918327/pexels-photo-918327.jpeg?auto=compress&cs=tinysrgb&w=400",
-      price: { 1: 149, 6: 799, 12: 1499, 24: 2799 },
-      features: [
-        "25g Complete Protein",
-        "No Added Sugar",
-        "Preservative Free",
-        "Gut Health Support",
-      ],
-      gradient: "from-amber-600 to-amber-800",
-      bgGradient: "bg-gradient-to-br from-amber-50 to-orange-50",
-    },
-    {
-      id: "vanilla",
-      name: "Vital Vanilla Protein Shake",
-      flavor: "Vanilla",
-      description:
-        "Simple doesn't mean boring. Smooth, balanced, and endlessly drinkable everyday essential.",
-      image:
-        "https://images.pexels.com/photos/414262/pexels-photo-414262.jpeg?auto=compress&cs=tinysrgb&w=400",
-      price: { 1: 149, 6: 799, 12: 1499, 24: 2799 },
-      features: [
-        "25g Complete Protein",
-        "No Added Sugar",
-        "Preservative Free",
-        "Gut Health Support",
-      ],
-      gradient: "from-yellow-300 to-yellow-500",
-      bgGradient: "bg-gradient-to-br from-yellow-50 to-amber-50",
-    },
-    {
-      id: "coffee",
-      name: "Vital Coffee Protein Shake",
-      flavor: "Coffee",
-      description:
-        "Your morning brew just got an upgrade. Daily protein and caffeine kick in one smooth bottle.",
-      image:
-        "https://images.pexels.com/photos/894695/pexels-photo-894695.jpeg?auto=compress&cs=tinysrgb&w=400",
-      price: { 1: 159, 6: 849, 12: 1599, 24: 2999 },
-      features: [
-        "25g Complete Protein",
-        "100mg Natural Caffeine",
-        "Preservative Free",
-        "Gut Health Support",
-      ],
-      gradient: "from-amber-800 to-stone-800",
-      bgGradient: "bg-gradient-to-br from-stone-50 to-amber-50",
-    },
-    {
-      id: "variety",
-      name: "Vital Variety Pack",
-      flavor: "Mixed",
-      description:
-        "All the flavours. All the functions. One pack. Perfect for those who can't pick just one.",
-      image:
-        "https://images.pexels.com/photos/1346347/pexels-photo-1346347.jpeg?auto=compress&cs=tinysrgb&w=400",
-      price: { 4: 599, 12: 1699, 24: 3199 },
-      features: [
-        "All 4 Flavours",
-        "25g Complete Protein",
-        "Perfect Variety",
-        "Great Value",
-      ],
-      gradient: "from-purple-400 to-pink-400",
-      bgGradient: "bg-gradient-to-br from-purple-50 to-pink-50",
-    },
-  ];
-
   const filteredProducts = useMemo(() => {
+    if (!products) return [];
+    
     let filtered = products.filter(
       (product) =>
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         product.flavor.toLowerCase().includes(searchTerm.toLowerCase())
     );
-
+  
     switch (sortBy) {
       case "price-low":
         filtered.sort(
           (a, b) =>
-            Math.min(...Object.values(a.price)) -
-            Math.min(...Object.values(b.price))
+            Math.min(...Object.values(a.prices)) -  // Changed from price to prices
+            Math.min(...Object.values(b.prices))   // Changed from price to prices
         );
         break;
       case "price-high":
         filtered.sort(
           (a, b) =>
-            Math.min(...Object.values(b.price)) -
-            Math.min(...Object.values(a.price))
+            Math.min(...Object.values(b.prices)) -  // Changed from price to prices
+            Math.min(...Object.values(a.prices))    // Changed from price to prices
         );
         break;
       case "name":
@@ -135,9 +43,9 @@ const ProductGrid: React.FC<ProductGridProps> = ({ onAddToCart }) => {
         filtered.sort((a, b) => a.name.localeCompare(b.name));
         break;
     }
-
+  
     return filtered;
-  }, [searchTerm, sortBy]);
+  }, [products, searchTerm, sortBy]);
 
   return (
     <section
@@ -303,7 +211,11 @@ const ProductGrid: React.FC<ProductGridProps> = ({ onAddToCart }) => {
                 animation: "fadeInUp 0.6s ease-out forwards",
               }}
             >
-              <ProductCard product={product} onAddToCart={onAddToCart} />
+              <ProductCard
+                product={product}
+                onAddToCart={onAddToCart}
+                viewDetailsLink={`/product/${product.id}`}
+              />
             </div>
           ))}
         </div>
@@ -332,8 +244,6 @@ const ProductGrid: React.FC<ProductGridProps> = ({ onAddToCart }) => {
           </div>
         )}
       </div>
-
-      
     </section>
   );
 };

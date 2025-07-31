@@ -9,37 +9,31 @@ const Hero: React.FC = () => {
     {
       image:
         "https://images.unsplash.com/photo-1550583724-b2692b85b150?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
-      title: "Premium Protein Shakes",
-      subtitle: "25g of complete protein in every delicious sip",
-      cta: "Shop Now"
+      
     },
     {
       image:
         "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
-      title: "Zero Added Sugar",
-      subtitle: "Natural sweetness, maximum nutrition",
-      cta: "Learn More"
+      
     },
     {
       image:
         "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
-      title: "Gut Health Support",
-      subtitle: "Prebiotics for a healthier digestive system",
-      cta: "Discover"
+        
+      
     },
     {
       image:
         "https://images.unsplash.com/photo-1547592180-85f173990554?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
-      title: "Multiple Flavors",
-      subtitle: "Strawberry, Chocolate, Vanilla & Coffee",
-      cta: "Explore Flavors"
+      
+      
+      
     },
     {
       image:
         "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
-      title: "Convenient & Ready",
-      subtitle: "No mixing, no mess - just grab and go",
-      cta: "Get Started"
+      
+      
     },
   ];
 
@@ -88,22 +82,7 @@ const Hero: React.FC = () => {
                   : "opacity-0 translate-y-10 absolute"
               }`}
             >
-              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white leading-tight">
-                {slide.title}
-              </h1>
-              <p className="text-lg sm:text-xl md:text-2xl text-white/90 max-w-2xl">
-                {slide.subtitle}
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <button className="bg-gradient-to-r from-[#688F4E] to-[#2B463C] text-white px-8 py-4 rounded-2xl font-semibold text-lg hover:shadow-xl hover:scale-105 transition-all duration-300 flex items-center gap-2">
-                  {slide.cta}
-                  <ArrowRight className="w-5 h-5" />
-                </button>
-                <button className="bg-white/20 backdrop-blur-sm text-white px-8 py-4 rounded-2xl font-semibold text-lg hover:bg-white/30 transition-all duration-300 flex items-center gap-2">
-                  <Play className="w-5 h-5" />
-                  Watch Video
-                </button>
-              </div>
+              
             </div>
           ))}
         </div>

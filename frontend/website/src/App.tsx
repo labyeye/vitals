@@ -13,12 +13,13 @@ import BlogsPage from "./components/pages/BlogsPage";
 import ProfilePage from "./components/pages/ProfilePage";
 import Login from "./components/auth/Login";
 import Register from "./components/auth/Register";
+import ProductDetailsPage from "./components/pages/ProductDetailsPage";
 import Dashboard from "./components/pages/Dashboard";
 
 function App() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
- 
+
 
   const handleUpdateQuantity = (cartItemId: string, newQuantity: number) => {
     if (newQuantity === 0) {
@@ -66,6 +67,8 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/product/:productId" element={<ProductDetailsPage />} />
+
           </Routes>
 
           <Footer />

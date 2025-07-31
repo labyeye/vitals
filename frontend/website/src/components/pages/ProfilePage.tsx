@@ -57,14 +57,20 @@ const ProfilePage: React.FC = () => {
     progressToNextTier: 0,
     pointsToNextTier: 1000
   };
+  const loyaltyData = user.loyalty || {
+    points: 0,
+    tier: 'bronze',
+    nextTierPoints: 5000,
+    progressToNextTier: 0,
+    history: []
+  };
+  
 
   // Milestone tiers
   const tiers = [
-    { name: "Bronze", minPoints: 0, maxPoints: 999, color: "#CD7F32", icon: Star },
-    { name: "Silver", minPoints: 1000, maxPoints: 2999, color: "#C0C0C0", icon: Award },
-    { name: "Gold", minPoints: 3000, maxPoints: 9999, color: "#FFD700", icon: Crown },
-    { name: "Platinum", minPoints: 10000, maxPoints: 29999, color: "#E5E4E2", icon: Crown },
-    { name: "Diamond", minPoints: 30000, maxPoints: 999999, color: "#B9F2FF", icon: Crown }
+    { name: "Bronze", minPoints: 0, maxPoints: 4999, color: "#CD7F32", icon: Star },
+    { name: "Silver", minPoints: 5000, maxPoints: 9999, color: "#C0C0C0", icon: Award },
+    { name: "Gold", minPoints: 10000, maxPoints: 999999, color: "#FFD700", icon: Crown }
   ];
 
   // Recent orders

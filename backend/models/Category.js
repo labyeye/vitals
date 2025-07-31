@@ -5,58 +5,40 @@ const categorySchema = new mongoose.Schema({
     type: String,
     required: [true, 'Category name is required'],
     trim: true,
+    unique: true,
     maxlength: [50, 'Category name cannot exceed 50 characters']
   },
   slug: {
     type: String,
-    required: [true, 'Category slug is required'],
+    required: true,
     unique: true,
-    lowercase: true,
     trim: true
   },
   description: {
     type: String,
-    maxlength: [200, 'Description cannot exceed 200 characters']
-  },
-  image: {
-    type: String,
-    default: null
+    maxlength: [500, 'Description cannot exceed 500 characters']
   },
   parent: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Category',
     default: null
   },
-  isActive: {
-    type: Boolean,
-    default: true
+  status: {
+    type: String,
+    enum: ['active', 'inactive'],
+    default: 'active'
   },
-  sortOrder: {
-    type: Number,
-    default: 0
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   }
 }, {
   timestamps: true
 });
 
-// Index for better query performance
-categorySchema.index({ slug: 1 });
-categorySchema.index({ parent: 1 });
-categorySchema.index({ isActive: 1 });
+// Indexes
+categorySchema.index({ name: 'text', description: 'text' });
+categorySchema.index({ slug: 1 }, { unique: true });
 
-// Virtual for full path (breadcrumb)
-categorySchema.virtual('fullPath').get(function() {
-  return this.parent ? `${this.parent.fullPath} > ${this.name}` : this.name;
-});
-
-// Static method to find active categories
-categorySchema.statics.findActive = function() {
-  return this.find({ isActive: true }).sort({ sortOrder: 1, name: 1 });
-};
-
-// Static method to find root categories
-categorySchema.statics.findRoots = function() {
-  return this.find({ parent: null, isActive: true }).sort({ sortOrder: 1, name: 1 });
-};
-
-module.exports = mongoose.model('Category', categorySchema); 
+module.exports = mongoose.model('Category', categorySchema);

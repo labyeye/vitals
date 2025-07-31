@@ -96,14 +96,7 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick }) => {
                     >
                       Profile
                     </Link>
-                    {user.role === 'admin' && (
-                      <Link
-                        to="/dashboard"
-                        className="block px-4 py-2 text-sm text-[#2B463C] hover:bg-[#f4f1e9] transition-colors duration-300"
-                      >
-                        Admin Dashboard
-                      </Link>
-                    )}
+                    
                     <button
                       onClick={logout}
                       className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-300 flex items-center"
@@ -114,11 +107,29 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick }) => {
                   </div>
                 </div>
               </div>
-            ) : (
-              <Link to="/login" className="p-1 lg:p-1.5 xl:p-2 text-black hover:text-[#688F4E] transition-colors duration-300 hover:bg-[#F4F1E9] rounded-full">
+                      ) : (
+            <div className="relative group">
+              <button className="p-1 lg:p-1.5 xl:p-2 text-black hover:text-[#688F4E] transition-colors duration-300 hover:bg-[#F4F1E9] rounded-full">
                 <User className="w-5 h-5 lg:w-6 lg:h-6 xl:w-6 xl:h-7" />
-              </Link>
-            )}
+              </button>
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-[#B1D182]/20 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
+                <div className="py-2">
+                  <Link
+                    to="/login"
+                    className="block px-4 py-2 text-sm text-[#2B463C] hover:bg-[#f4f1e9] transition-colors duration-300"
+                  >
+                    Customer Login
+                  </Link>
+                  <Link
+                    to="/admin-login"
+                    className="block px-4 py-2 text-sm text-[#2B463C] hover:bg-[#f4f1e9] transition-colors duration-300"
+                  >
+                    Admin Login
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
             <button
               onClick={onCartClick}
               className="relative p-1 lg:p-1.5 xl:p-2 text-black hover:text-[#688F4E] transition-all duration-300 hover:bg-[#F4F1E9] rounded-full group"

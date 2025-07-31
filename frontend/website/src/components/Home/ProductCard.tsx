@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, Heart, Star, Info } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export interface Product {
   id: string;
@@ -7,7 +8,7 @@ export interface Product {
   flavor: string;
   description: string;
   image: string;
-  price: Record<number, number>;
+  prices: Record<number, number>;
   features: string[];
   gradient: string;
   bgGradient: string;
@@ -16,16 +17,21 @@ export interface Product {
 interface ProductCardProps {
   product: Product;
   onAddToCart: (productId: string, quantity: number, packSize: number) => void;
+  viewDetailsLink?: string; // Optional prop for view details link
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
-  // Get available pack sizes from the product's price object
-  const availablePackSizes = Object.keys(product.price).map(Number).sort((a, b) => a - b);
+const ProductCard: React.FC<ProductCardProps> = ({ 
+  product, 
+  onAddToCart, 
+  viewDetailsLink 
+}) => {
+  const navigate = useNavigate();
+  const availablePackSizes = Object.keys(product.prices).map(Number).sort((a, b) => a - b);
   
   // Initialize selectedPack with the first available pack size or fallback to 1
   const getInitialPackSize = (): number => {
-    if (product.price[1]) return 1;
-    if (product.price[6]) return 6;
+    if (product.prices[1]) return 1;
+    if (product.prices[6]) return 6;
     return availablePackSizes[0] || 1;
   };
 
@@ -35,7 +41,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
 
   // Update selectedPack if the current selection is not available for this product
   useEffect(() => {
-    if (!product.price[selectedPack]) {
+    if (!product.prices[selectedPack]) {
       setSelectedPack(getInitialPackSize());
     }
   }, [product.id, selectedPack]);
@@ -47,8 +53,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
     popular: size === 6
   }));
 
-  const currentPrice = product.price[selectedPack] || 0;
-  const pricePerBottle = selectedPack > 0 ? currentPrice / selectedPack : 0;
+  const currentPrice = product.prices[selectedPack] || 0;
+const pricePerBottle = selectedPack > 0 ? currentPrice / selectedPack : 0;
+
+  const handleViewDetails = () => {
+    if (viewDetailsLink) {
+      navigate(viewDetailsLink);
+    } else {
+      navigate(`/product/${product.id}`);
+    }
+  };
 
   return (
     <div
@@ -173,6 +187,15 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
             <span>Shelf Stable</span>
           </div>
         </div>
+
+        {/* View Details Button */}
+        <button
+          onClick={handleViewDetails}
+          className="w-full bg-gradient-to-r from-[#2B463C] to-[#688F4E] text-white py-3 px-6 rounded-2xl font-semibold flex items-center justify-center space-x-2 hover:shadow-xl hover:scale-105 transition-all duration-300 group mb-2"
+        >
+          <ShoppingBag className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
+          <span>View Details</span>
+        </button>
 
         {/* Add to Cart Button */}
         <button
