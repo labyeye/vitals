@@ -1,18 +1,8 @@
 import React, { useState, useEffect } from "react";
-import Header from "../Home/Header";
+import { useCartContext } from "../../context/CartContext";
 import ProductGrid from "../Home/ProductGrid";
 import Reviews from "../Home/Review";
-import Cart from "../Home/Cart";
 import { getProducts } from "../../services/productService";
-// Types for Cart
-interface CartItem {
-  id: string;
-  name: string;
-  packSize: number;
-  quantity: number;
-  price: number;
-  image: string;
-}
 
 interface Product {
   id: string;
@@ -30,9 +20,8 @@ const ProductPage: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]); // Initialize as empty array
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { addToCart } = useCartContext();
 
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [isCartOpen, setIsCartOpen] = useState(false);
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -51,6 +40,7 @@ const ProductPage: React.FC = () => {
 
     fetchProducts();
   }, []);
+
   const handleAddToCart = (
     productId: string,
     quantity: number,
@@ -65,68 +55,51 @@ const ProductPage: React.FC = () => {
     const itemPrice =
       productToAdd.prices[packSize as keyof typeof productToAdd.prices] ?? 0;
 
-    const existingItemIndex = cartItems.findIndex(
-      (item) => item.id === productId && item.packSize === packSize
-    );
+    const cartItem = {
+      id: productId,
+      name: productToAdd.name,
+      packSize,
+      quantity,
+      price: itemPrice,
+      image: productToAdd.image,
+    };
 
-    if (existingItemIndex >= 0) {
-      // Update quantity if item already exists
-      const updatedItems = [...cartItems];
-      updatedItems[existingItemIndex].quantity += quantity;
-      setCartItems(updatedItems);
-    } else {
-      // Add new item to cart
-      setCartItems([
-        ...cartItems,
-        {
-          id: productId,
-          name: productToAdd.name,
-          packSize,
-          quantity,
-          price: itemPrice,
-          image: productToAdd.image,
-        },
-      ]);
-    }
+    addToCart(cartItem);
   };
 
-  const handleUpdateQuantity = (id: string, quantity: number) => {
-    if (quantity <= 0) {
-      handleRemoveItem(id);
-      return;
-    }
-
-    setCartItems(
-      cartItems.map((item) =>
-        `${item.id}-${item.packSize}` === id ? { ...item, quantity } : item
-      )
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-white via-[#F4F1E9]/30 to-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#688F4E] mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading products...</p>
+        </div>
+      </div>
     );
-  };
+  }
 
-  const handleRemoveItem = (id: string) => {
-    setCartItems(
-      cartItems.filter((item) => `${item.id}-${item.packSize}` !== id)
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-white via-[#F4F1E9]/30 to-white flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="bg-[#688F4E] text-white px-4 py-2 rounded hover:bg-[#2B463C] transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
     );
-  };
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-[#F4F1E9]/30 to-white">
-      <Header
-        cartCount={cartItems.reduce((total, item) => total + item.quantity, 0)}
-        onCartClick={() => setIsCartOpen(true)}
-      />
-
       <main>
         <ProductGrid products={products} onAddToCart={handleAddToCart} />
         <Reviews />
       </main>
-      <Cart
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-        items={cartItems}
-        onUpdateQuantity={handleUpdateQuantity}
-        onRemoveItem={handleRemoveItem}
-      />
     </div>
   );
 };

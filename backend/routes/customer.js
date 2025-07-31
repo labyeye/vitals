@@ -4,6 +4,7 @@ const { protect, isCustomer } = require('../middleware/auth');
 const Product = require('../models/Product');
 const Order = require('../models/Order');
 const User = require('../models/User');
+const Loyalty = require('../models/Loyalty'); // Added Loyalty model
 const {getLoyaltyPoints, checkTierUpgrade} = require('../controller/loyaltyController');
 
 const router = express.Router();
@@ -494,16 +495,16 @@ router.post('/orders', [
     }
 
     // Calculate shipping cost (simplified)
-    const shippingCost = subtotal > 100 ? 0 : 10; // Free shipping over $100
+    const shippingCost = subtotal > 1000 ? 0 : 50; // Free shipping over ₹1000
 
-    // Calculate tax (simplified - 8.5%)
-    const tax = subtotal * 0.085;
+    // Calculate tax (8%)
+    const tax = subtotal * 0.08;
 
     // Calculate total
     const total = subtotal + shippingCost + tax;
 
     // Create order
-    const order = await Order.create({
+    const order = new Order({
       customer: req.user._id,
       items: orderItems,
       subtotal,
@@ -523,6 +524,7 @@ router.post('/orders', [
         customer: notes?.customer || ''
       }
     });
+    await order.save();
 
     // Update product stock
     for (const item of orderItems) {
@@ -534,10 +536,69 @@ router.post('/orders', [
     // Add initial timeline entry
     await order.addTimelineEntry('pending', 'Order placed successfully', req.user._id);
 
+    // Initialize loyalty account if it doesn't exist
+    const existingLoyalty = await Loyalty.findOne({ user: req.user._id });
+    if (!existingLoyalty) {
+      await Loyalty.create({
+        user: req.user._id,
+        points: 0,
+        tier: 'bronze',
+        nextTierPoints: 5000
+      });
+    }
+
+    // Add loyalty points for order placement (small amount)
+    const loyalty = await Loyalty.findOne({ user: req.user._id });
+    if (loyalty) {
+      const pointsEarned = Math.floor(total / 100); // 1 point per ₹100 spent
+      loyalty.points += pointsEarned;
+      loyalty.lifetimePoints += pointsEarned;
+      
+      loyalty.history.push({
+        type: 'earned',
+        points: pointsEarned,
+        order: order._id,
+        description: `Earned ${pointsEarned} points from order #${order.orderNumber}`
+      });
+
+      // Check for tier upgrade
+      const { newTier, nextTierPoints } = loyalty.checkTierUpgrade();
+      if (newTier !== loyalty.tier) {
+        loyalty.history.push({
+          type: 'tier_upgrade',
+          points: 0,
+          description: `Upgraded from ${loyalty.tier} to ${newTier} tier`
+        });
+        loyalty.tier = newTier;
+        loyalty.nextTierPoints = nextTierPoints;
+      }
+
+      await loyalty.save();
+
+      // Update user document for quick access
+      await User.findByIdAndUpdate(req.user._id, {
+        loyaltyPoints: loyalty.points,
+        loyaltyTier: loyalty.tier,
+        $push: {
+          loyaltyHistory: {
+            date: new Date(),
+            action: 'points_earned',
+            points: pointsEarned,
+            order: order._id
+          }
+        }
+      });
+    }
+
     res.status(201).json({
       success: true,
       message: 'Order placed successfully',
-      data: order
+      data: {
+        order,
+        loyaltyPointsEarned: loyalty ? Math.floor(total / 100) : 0,
+        newLoyaltyPoints: loyalty ? loyalty.points : 0,
+        newTier: loyalty ? loyalty.tier : 'bronze'
+      }
     });
   } catch (error) {
     console.error('Place order error:', error);

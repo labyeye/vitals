@@ -61,28 +61,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
           );
         })}
       </nav>
+      
 
       {/* User Info and Logout */}
-      <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-gray-200 bg-white">
-        <div className="flex items-center mb-3">
-          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-            <User className="w-4 h-4 text-blue-600" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-gray-900">
-              {user?.firstName} {user?.lastName}
-            </p>
-            <p className="text-xs text-gray-500">{user?.email}</p>
-          </div>
-        </div>
-        <button
-          onClick={logout}
-          className="w-full flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors duration-200"
-        >
-          <LogOut className="w-4 h-4 mr-2" />
-          Logout
-        </button>
-      </div>
+      
     </div>
   );
 };

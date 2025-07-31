@@ -4,6 +4,7 @@ const { protect, isAdmin } = require('../middleware/auth');
 const User = require('../models/User');
 const Product = require('../models/Product');
 const Order = require('../models/Order');
+const loyaltyController = require('../controller/loyaltyController');
 
 const router = express.Router();
 
@@ -344,6 +345,11 @@ router.put('/orders/:id/status', [
 
     // Update order status
     await order.updateStatus(status, notes, req.user._id);
+
+    // Update loyalty points if order is delivered
+    if (status === 'delivered') {
+      await loyaltyController.updateLoyaltyPoints(order._id);
+    }
 
     // Update product stock if order is cancelled or refunded
     if (status === 'cancelled' || status === 'refunded') {

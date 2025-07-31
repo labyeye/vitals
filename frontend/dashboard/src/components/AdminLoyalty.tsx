@@ -27,7 +27,7 @@ const AdminLoyalty: React.FC = () => {
   });
 
   const { token } = useAuth();
-  const API_BASE_URL = 'https://vitals-iu4r.onrender.com/api';
+  const API_BASE_URL = 'http://localhost:3500/api';
 
   useEffect(() => {
     fetchLoyaltyAccounts();

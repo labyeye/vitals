@@ -24,12 +24,26 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// CORS configuration - Allow all origins for development
+// CORS configuration - Allow dashboard and website origins for development
 app.use(cors({
-    origin: true, // or you could use a function for dynamic origin checking
+    origin: [
+      'http://localhost:5173', // Vite default for dashboard
+      'http://localhost:5174', // Vite default for website (if used)
+      'http://localhost:3000', // React default (if used)
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:5174',
+    ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token'],
+    allowedHeaders: [
+      'Accept',
+      'Accept-Language',
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'X-CSRF-Token',
+      'x-auth-token'
+    ],
     exposedHeaders: ['Set-Cookie', 'Date', 'ETag']
   }));
 
@@ -50,14 +64,12 @@ mongoose.connect(process.env.MONGODB_URI,{
 })
 .catch(err => console.error('MongoDB connection error:', err));
 
-// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/customer', customerRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 
-// Health check endpoint
 app.get('/api/health', (req, res) => {
   console.log('Health check request received from:', req.headers.origin);
   res.json({ 
@@ -67,8 +79,6 @@ app.get('/api/health', (req, res) => {
     cors: 'enabled'
   });
 });
-
-// Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ 

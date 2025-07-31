@@ -127,6 +127,7 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick }) => {
           )}
             <button
               onClick={onCartClick}
+              data-cart-button
               className="relative p-1 lg:p-1.5 xl:p-2 text-black hover:text-[#688F4E] transition-all duration-300 hover:bg-[#F4F1E9] rounded-full group"
             >
               <ShoppingCart className="w-5 h-5 lg:w-6 lg:h-6 xl:w-6 xl:h-7 group-hover:scale-110 transition-transform duration-300" />
@@ -142,6 +143,7 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick }) => {
           <div className="flex md:hidden items-center space-x-3">
             <button
               onClick={onCartClick}
+              data-cart-button
               className="relative p-1 text-black hover:text-[#688F4E] transition-all duration-300 rounded-full"
             >
               <ShoppingCart className="w-5 h-5" />

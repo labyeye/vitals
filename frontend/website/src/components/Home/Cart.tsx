@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Plus, Minus, ShoppingBag, Trash2, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export interface CartItem {
   id: string;
@@ -16,12 +17,14 @@ interface CartProps {
   items: CartItem[];
   onUpdateQuantity: (id: string, quantity: number) => void;
   onRemoveItem: (id: string) => void;
+  onProceedToCheckout?: () => void;
 }
 
-const Cart: React.FC<CartProps> = ({ isOpen, onClose, items, onUpdateQuantity, onRemoveItem }) => {
+const Cart: React.FC<CartProps> = ({ isOpen, onClose, items, onUpdateQuantity, onRemoveItem, onProceedToCheckout }) => {
   const subtotal = items.reduce((total, item) => total + (item.price * item.quantity), 0);
   const shipping = subtotal > 1000 ? 0 : 50;
   const total = subtotal + shipping;
+  const navigate = useNavigate();
 
   if (!isOpen) return null;
 
@@ -34,7 +37,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, items, onUpdateQuantity, o
       ></div>
 
       {/* Cart Panel */}
-      <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white/95 backdrop-blur-lg shadow-2xl transform transition-transform duration-300 ease-out">
+      <div className="fixed top-0 right-0 h-full w-full max-w-md bg-white/95 backdrop-blur-lg shadow-2xl transform transition-transform duration-300 ease-out">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
@@ -142,7 +145,18 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, items, onUpdateQuantity, o
               </div>
             </div>
 
-            <button className="w-full bg-gradient-to-r from-[#2B463C] to-[#688F4E] text-white py-4 rounded-2xl font-semibold flex items-center justify-center space-x-2 hover:shadow-2xl hover:scale-105 transition-all duration-300 group">
+            <button
+              className="w-full bg-gradient-to-r from-[#2B463C] to-[#688F4E] text-white py-4 rounded-2xl font-semibold flex items-center justify-center space-x-2 hover:shadow-2xl hover:scale-105 transition-all duration-300 group"
+              onClick={() => {
+                if (onProceedToCheckout) {
+                  onProceedToCheckout();
+                } else {
+                  onClose();
+                  navigate('/checkout');
+                }
+              }}
+              disabled={items.length === 0}
+            >
               <span>Proceed to Checkout</span>
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
             </button>

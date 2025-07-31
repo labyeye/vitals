@@ -20,13 +20,32 @@ import {
   TrendingUp,
   ShoppingBag,
   Eye,
-  Edit
+  Edit,
+  X,
+  Save
 } from "lucide-react";
 
 const ProfilePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState("overview");
-  const { user, logout } = useAuth();
+  const { user, token, logout } = useAuth();
   const navigate = useNavigate();
+  const [orders, setOrders] = useState<any[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState('');
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    address: {
+      street: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      country: 'India'
+    }
+  });
+  const [saving, setSaving] = useState(false);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -34,6 +53,58 @@ const ProfilePage: React.FC = () => {
       navigate('/login');
     }
   }, [user, navigate]);
+
+  // Initialize edit form when user data is available
+  useEffect(() => {
+    if (user) {
+      setEditForm({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        phone: user.phone || '',
+        address: {
+          street: user.address?.street || '',
+          city: user.address?.city || '',
+          state: user.address?.state || '',
+          zipCode: user.address?.zipCode || '',
+          country: user.address?.country || 'India'
+        }
+      });
+    }
+  }, [user]);
+
+  const handleEditProfile = () => {
+    setShowEditModal(true);
+  };
+
+  const handleSaveProfile = async () => {
+    if (!token) return;
+    
+    setSaving(true);
+    try {
+      const response = await fetch('http://localhost:3500/api/auth/profile', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editForm),
+      });
+
+      if (response.ok) {
+        setShowEditModal(false);
+        // Refresh the page to get updated user data
+        window.location.reload();
+      } else {
+        const data = await response.json();
+        alert('Error updating profile: ' + (data.message || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('Error updating profile. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // If no user, show loading or redirect
   if (!user) {
@@ -48,12 +119,12 @@ const ProfilePage: React.FC = () => {
     address: user.address ? 
       `${user.address.street || ''}, ${user.address.city || ''}, ${user.address.state || ''} ${user.address.zipCode || ''}`.replace(/^,\s*/, '').replace(/,\s*,/g, ',') || "Not provided" : "Not provided",
     joinDate: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
-    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80",
+    avatar: user.avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80",
     totalOrders: 0, // Will be fetched from API later
     totalSpent: 0, // Will be fetched from API later
-    loyaltyPoints: 0, // Will be fetched from API later
-    currentTier: "Bronze",
-    nextTier: "Silver",
+    loyaltyPoints: user.loyalty?.points || 0,
+    currentTier: user.loyalty?.tier || 'Bronze',
+    nextTier: 'Silver', // You can compute this if needed
     progressToNextTier: 0,
     pointsToNextTier: 1000
   };
@@ -73,33 +144,35 @@ const ProfilePage: React.FC = () => {
     { name: "Gold", minPoints: 10000, maxPoints: 999999, color: "#FFD700", icon: Crown }
   ];
 
-  // Recent orders
-  const recentOrders = [
-    {
-      id: "ORD-001",
-      date: "2024-12-15",
-      status: "Delivered",
-      total: 1200,
-      items: ["Chocolate Protein Shake", "Vanilla Protein Shake"]
-    },
-    {
-      id: "ORD-002", 
-      date: "2024-12-10",
-      status: "In Transit",
-      total: 800,
-      items: ["Berry Protein Shake"]
-    },
-    {
-      id: "ORD-003",
-      date: "2024-12-05", 
-      status: "Delivered",
-      total: 1500,
-      items: ["Chocolate Protein Shake", "Protein Bars"]
+  // Fetch customer orders when Orders tab is active
+  useEffect(() => {
+    if (activeTab === 'orders' && user && token) {
+      const fetchOrders = async () => {
+        setOrdersLoading(true);
+        setOrdersError('');
+        try {
+          const response = await fetch('http://localhost:3500/api/customer/orders', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+          const data = await response.json();
+          console.log('Fetched customer orders:', data); // Debug log
+          if (!response.ok) throw new Error(data.message || 'Failed to fetch orders');
+          setOrders(data.data.orders);
+        } catch (err: any) {
+          setOrdersError(err.message || 'Failed to fetch orders');
+        } finally {
+          setOrdersLoading(false);
+        }
+      };
+      fetchOrders();
     }
-  ];
+  }, [activeTab, user, token]);
 
-  const getCurrentTier = () => tiers.find(tier => tier.name === user.currentTier);
-  const getNextTier = () => tiers.find(tier => tier.name === user.nextTier);
+  const getCurrentTier = () => tiers.find(tier => tier.name === userData.currentTier);
+  const getNextTier = () => tiers.find(tier => tier.name === userData.nextTier);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F4F1E9] via-white to-[#B1D182]/10 pt-24">
@@ -109,11 +182,14 @@ const ProfilePage: React.FC = () => {
           <div className="flex flex-col md:flex-row items-center gap-6">
             <div className="relative">
               <img
-                src={user.avatar}
-                alt={user.name}
+                src={userData.avatar}
+                alt={userData.name}
                 className="w-24 h-24 rounded-full object-cover border-4 border-[#688F4E]"
               />
-              <button className="absolute -bottom-2 -right-2 bg-[#688F4E] text-white p-2 rounded-full hover:bg-[#5a7a42] transition-colors">
+              <button 
+                onClick={handleEditProfile}
+                className="absolute -bottom-2 -right-2 bg-[#688F4E] text-white p-2 rounded-full hover:bg-[#5a7a42] transition-colors"
+              >
                 <Edit className="w-4 h-4" />
               </button>
             </div>
@@ -290,27 +366,49 @@ const ProfilePage: React.FC = () => {
             {activeTab === "orders" && (
               <div>
                 <h3 className="text-xl font-bold text-[#2B463C] mb-4">Recent Orders</h3>
+                {!token && (
+                  <div className="text-center py-8 text-red-600">You are not logged in. Please log in to view your orders.</div>
+                )}
+                {ordersLoading ? (
+                  <div className="text-center py-8">Loading orders...</div>
+                ) : ordersError ? (
+                  <div className="text-center py-8 text-red-600">{ordersError}</div>
+                ) : orders.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">No orders found.</div>
+                ) : (
                 <div className="space-y-4">
-                  {recentOrders.map((order) => (
-                    <div key={order.id} className="border border-gray-200 rounded-lg p-4">
+                    {orders.map((order) => (
+                      <div key={order._id} className="border border-gray-200 rounded-lg p-4 bg-white shadow-sm">
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold text-[#2B463C]">{order.id}</h4>
+                          <h4 className="font-semibold text-[#2B463C]">{order.orderNumber}</h4>
                         <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                          order.status === 'Delivered' 
+                            order.status === 'delivered' 
                             ? 'bg-green-100 text-green-800' 
+                              : order.status === 'pending'
+                                ? 'bg-yellow-100 text-yellow-800'
                             : 'bg-blue-100 text-blue-800'
                         }`}>
                           {order.status}
                         </span>
                       </div>
-                      <p className="text-gray-600 text-sm mb-2">{order.date}</p>
+                        <p className="text-gray-600 text-sm mb-2">{new Date(order.createdAt).toLocaleDateString()}</p>
                       <p className="text-gray-600 text-sm mb-2">
-                        {order.items.join(", ")}
+                          {order.items.map((item: any) => item.product?.name).join(", ")}
                       </p>
                       <p className="font-semibold text-[#2B463C]">₹{order.total}</p>
+                        {/* Pay Now button for pending, non-COD orders */}
+                        {order.status === 'pending' && order.payment?.method !== 'cash_on_delivery' && (
+                          <button
+                            className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                            onClick={() => alert('Redirect to payment gateway for order ' + order.orderNumber)}
+                          >
+                            Pay Now
+                          </button>
+                        )}
                     </div>
                   ))}
                 </div>
+                )}
               </div>
             )}
 
@@ -332,7 +430,10 @@ const ProfilePage: React.FC = () => {
                 <div>
                   <h3 className="text-xl font-bold text-[#2B463C] mb-4">Account Settings</h3>
                   <div className="space-y-4">
-                    <button className="flex items-center gap-3 w-full p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <button 
+                      onClick={handleEditProfile}
+                      className="flex items-center gap-3 w-full p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
                       <User className="w-5 h-5 text-[#688F4E]" />
                       <span className="text-left">Edit Profile</span>
                     </button>
@@ -365,6 +466,154 @@ const ProfilePage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Edit Profile Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-[#2B463C]">Edit Profile</h2>
+                <button
+                  onClick={() => setShowEditModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              {/* Personal Information */}
+              <div>
+                <h3 className="text-lg font-semibold text-[#2B463C] mb-4">Personal Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+                    <input
+                      type="text"
+                      value={editForm.firstName}
+                      onChange={(e) => setEditForm({...editForm, firstName: e.target.value})}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                    <input
+                      type="text"
+                      value={editForm.lastName}
+                      onChange={(e) => setEditForm({...editForm, lastName: e.target.value})}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                    <input
+                      type="tel"
+                      value={editForm.phone}
+                      onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Address Information */}
+              <div>
+                <h3 className="text-lg font-semibold text-[#2B463C] mb-4">Address Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Street Address</label>
+                    <input
+                      type="text"
+                      value={editForm.address.street}
+                      onChange={(e) => setEditForm({
+                        ...editForm, 
+                        address: {...editForm.address, street: e.target.value}
+                      })}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
+                    <input
+                      type="text"
+                      value={editForm.address.city}
+                      onChange={(e) => setEditForm({
+                        ...editForm, 
+                        address: {...editForm.address, city: e.target.value}
+                      })}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
+                    <input
+                      type="text"
+                      value={editForm.address.state}
+                      onChange={(e) => setEditForm({
+                        ...editForm, 
+                        address: {...editForm.address, state: e.target.value}
+                      })}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">ZIP Code</label>
+                    <input
+                      type="text"
+                      value={editForm.address.zipCode}
+                      onChange={(e) => setEditForm({
+                        ...editForm, 
+                        address: {...editForm.address, zipCode: e.target.value}
+                      })}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Country</label>
+                    <input
+                      type="text"
+                      value={editForm.address.country}
+                      onChange={(e) => setEditForm({
+                        ...editForm, 
+                        address: {...editForm.address, country: e.target.value}
+                      })}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-gray-200 flex justify-end space-x-4">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveProfile}
+                disabled={saving}
+                className="px-6 py-3 bg-[#688F4E] text-white rounded-lg hover:bg-[#5a7a42] transition-colors disabled:bg-gray-400 flex items-center space-x-2"
+              >
+                {saving ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>Save Changes</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

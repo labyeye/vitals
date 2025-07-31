@@ -232,8 +232,7 @@ orderSchema.index({ status: 1 });
 orderSchema.index({ 'payment.status': 1 });
 orderSchema.index({ createdAt: -1 });
 
-// Pre-save middleware to generate order number
-orderSchema.pre('save', async function(next) {
+orderSchema.pre('validate', async function(next) {
   if (this.isNew) {
     const date = new Date();
     const year = date.getFullYear().toString().slice(-2);
@@ -251,7 +250,6 @@ orderSchema.pre('save', async function(next) {
   }
   next();
 });
-
 // Virtual for full shipping address
 orderSchema.virtual('fullShippingAddress').get(function() {
   return `${this.shippingAddress.street}, ${this.shippingAddress.city}, ${this.shippingAddress.state} ${this.shippingAddress.zipCode}, ${this.shippingAddress.country}`;

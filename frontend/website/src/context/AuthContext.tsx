@@ -16,6 +16,14 @@ interface User {
   };
   isActive: boolean;
   isEmailVerified: boolean;
+  loyalty?: {
+    points?: number;
+    tier?: string;
+    nextTierPoints?: number;
+    progressToNextTier?: number;
+    history?: any[];
+  };
+  avatar?: string;
 }
 
 interface AuthContextType {
@@ -58,7 +66,7 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-const API_BASE_URL = 'https://vitals-iu4r.onrender.com/api';
+const API_BASE_URL = 'http://localhost:3500/api';
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => {

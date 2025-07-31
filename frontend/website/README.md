@@ -1,6 +1,6 @@
-# Vitals Protein Shake Website
+# Evolv's Protein Shake Website
 
-A modern, responsive website for Vitals protein shake company with authentication, product browsing, and admin dashboard functionality.
+A modern, responsive website for Evolv's protein shake company with authentication, product browsing, and admin dashboard functionality.
 
 ## Features
 
@@ -127,7 +127,7 @@ Accessible only to admin users at `/dashboard`:
 
 ## API Integration
 
-The frontend connects to the backend API at `https://vitals-iu4r.onrender.com/api`:
+The frontend connects to the backend API at `http://localhost:3500/api`:
 
 ### Endpoints Used
 - `POST /auth/login` - User login
@@ -162,7 +162,7 @@ npm run lint         # Run ESLint
 Create a `.env` file in the frontend directory:
 
 ```env
-VITE_API_URL=https://vitals-iu4r.onrender.com/api
+VITE_API_URL=http://localhost:3500/api
 ```
 
 ## Deployment

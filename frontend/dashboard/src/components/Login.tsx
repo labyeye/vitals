@@ -70,7 +70,7 @@ const Login: React.FC = () => {
             Admin Dashboard
           </h2>
           <p className="text-gray-600 text-sm">
-            Sign in to access Vitals admin panel
+            Sign in to access Evolv's admin panel
           </p>
         </div>
 

@@ -1,17 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import Header from "../Home/Header";
-import Cart from "../Home/Cart";
+import { useCartContext } from "../../context/CartContext";
 import { getProductById } from "../../services/productService";
-
-interface CartItem {
-  id: string;
-  name: string;
-  packSize: number;
-  quantity: number;
-  price: number;
-  image: string;
-}
 
 interface Product {
   id: string;
@@ -28,17 +18,22 @@ interface Product {
 const ProductDetailsPage: React.FC = () => {
   const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [isCartOpen, setIsCartOpen] = useState(false);
+  const { cartItems, addToCart, updateQuantity, removeItem } = useCartContext();
   const [selectedPackSize, setSelectedPackSize] = useState<number>(1);
   const [quantity, setQuantity] = useState(1);
   const [product, setProduct] = useState<Product | null>(null);
+
   useEffect(() => {
     const fetchProduct = async () => {
       try {
         if (productId) {
           const data = await getProductById(productId);
           setProduct(data);
+          // Set initial pack size to first available size
+          const availableSizes = Object.keys(data.prices).map(Number).sort((a, b) => a - b);
+          if (availableSizes.length > 0) {
+            setSelectedPackSize(availableSizes[0]);
+          }
         }
       } catch (error) {
         console.error('Error fetching product:', error);
@@ -50,52 +45,29 @@ const ProductDetailsPage: React.FC = () => {
   }, [productId, navigate]);
 
   if (!product) {
-    return <div>Loading...</div>;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-white via-[#F4F1E9]/30 to-white mt-20 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#688F4E] mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading product...</p>
+        </div>
+      </div>
+    );
   }
 
   const handleAddToCart = () => {
     const itemPrice = product.prices[selectedPackSize as keyof typeof product.prices] ?? 0;
 
-    const existingItemIndex = cartItems.findIndex(
-      (item) => item.id === product.id && item.packSize === selectedPackSize
-    );
+    const cartItem = {
+      id: product.id,
+      name: product.name,
+      packSize: selectedPackSize,
+      quantity: quantity,
+      price: itemPrice,
+      image: product.image,
+    };
 
-    if (existingItemIndex >= 0) {
-      const updatedItems = [...cartItems];
-      updatedItems[existingItemIndex].quantity += quantity;
-      setCartItems(updatedItems);
-    } else {
-      setCartItems([
-        ...cartItems,
-        {
-          id: product.id,
-          name: product.name,
-          packSize: selectedPackSize,
-          quantity,
-          price: itemPrice,
-          image: product.image,
-        },
-      ]);
-    }
-  };
-
-  const handleUpdateQuantity = (id: string, quantity: number) => {
-    if (quantity <= 0) {
-      handleRemoveItem(id);
-      return;
-    }
-
-    setCartItems(
-      cartItems.map((item) =>
-        `${item.id}-${item.packSize}` === id ? { ...item, quantity } : item
-      )
-    );
-  };
-
-  const handleRemoveItem = (id: string) => {
-    setCartItems(
-      cartItems.filter((item) => `${item.id}-${item.packSize}` !== id)
-    );
+    addToCart(cartItem);
   };
 
   const packSizes = Object.keys(product.prices).map(Number);
@@ -103,11 +75,6 @@ const ProductDetailsPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-[#F4F1E9]/30 to-white mt-20">
-      <Header
-        cartCount={cartItems.reduce((total, item) => total + item.quantity, 0)}
-        onCartClick={() => setIsCartOpen(true)}
-      />
-
       <main className="container mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row gap-8">
           {/* Product Image */}
@@ -197,20 +164,36 @@ const ProductDetailsPage: React.FC = () => {
                 </button>
               </div>
             </div>
+
+            {/* View Cart Button */}
+            <div className="mt-6 space-y-3">
+              <button
+                onClick={() => navigate('/checkout')}
+                className="w-full bg-[#2B463C] text-white py-3 px-6 rounded-full font-medium hover:bg-[#688F4E] transition-colors"
+              >
+                Proceed to Checkout ({cartItems.reduce((total, item) => total + item.quantity, 0)} items)
+              </button>
+              
+              {cartItems.length > 0 && (
+                <button
+                  onClick={() => {
+                    // This will open the cart modal by triggering the cart click
+                    const cartButton = document.querySelector('[data-cart-button]') as HTMLElement;
+                    if (cartButton) {
+                      cartButton.click();
+                    }
+                  }}
+                  className="w-full bg-gray-100 text-gray-700 py-2 px-6 rounded-full font-medium hover:bg-gray-200 transition-colors"
+                >
+                  View Cart ({cartItems.reduce((total, item) => total + item.quantity, 0)} items)
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </main>
-
-      <Cart
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-        items={cartItems}
-        onUpdateQuantity={handleUpdateQuantity}
-        onRemoveItem={handleRemoveItem}
-      />
     </div>
   );
 };
-
 
 export default ProductDetailsPage;
