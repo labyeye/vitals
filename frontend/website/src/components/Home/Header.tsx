@@ -120,12 +120,7 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick }) => {
                   >
                     Customer Login
                   </Link>
-                  <Link
-                    to="/admin-login"
-                    className="block px-4 py-2 text-sm text-[#2B463C] hover:bg-[#f4f1e9] transition-colors duration-300"
-                  >
-                    Admin Login
-                  </Link>
+                  
                 </div>
               </div>
             </div>
