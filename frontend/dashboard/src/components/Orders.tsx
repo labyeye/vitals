@@ -100,18 +100,37 @@ const Orders: React.FC<OrdersProps> = ({ onViewDetails }) => {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ 
+          status: newStatus,
+          notes: `Status updated to ${newStatus}`
+        }),
       });
       const data = await response.json();
       if (!response.ok) {
         console.error('Status update error:', data);
         throw new Error(data.message || 'Failed to update status');
       }
-      setOrders((prev) => prev.map((o) => o._id === orderId ? { ...o, status: newStatus } : o));
+      
+      // Refresh the orders list to get updated data
+      const refreshResponse = await fetch('http://localhost:3500/api/admin/orders', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      const refreshData = await refreshResponse.json();
+      if (refreshResponse.ok) {
+        setOrders(refreshData.data.orders);
+      }
+      
       alert('Order status updated!');
     } catch (err: any) {
       alert(err.message || 'Failed to update status');
     }
+  };
+
+  const getStatusCount = (status: string) => {
+    return orders.filter(order => order.status === status).length;
   };
 
   return (
@@ -139,22 +158,22 @@ const Orders: React.FC<OrdersProps> = ({ onViewDetails }) => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="text-center p-4 bg-yellow-50 rounded-lg border border-yellow-200">
             <Package className="w-8 h-8 text-yellow-600 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-yellow-800">23</div>
+            <div className="text-2xl font-bold text-yellow-800">{getStatusCount('pending')}</div>
             <div className="text-sm text-yellow-600">Pending</div>
           </div>
           <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
             <Package className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-blue-800">67</div>
+            <div className="text-2xl font-bold text-blue-800">{getStatusCount('processing')}</div>
             <div className="text-sm text-blue-600">Processing</div>
           </div>
           <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
             <Truck className="w-8 h-8 text-purple-600 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-purple-800">142</div>
+            <div className="text-2xl font-bold text-purple-800">{getStatusCount('shipped')}</div>
             <div className="text-sm text-purple-600">Shipped</div>
           </div>
           <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
             <CheckCircle className="w-8 h-8 text-green-600 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-green-800">1,234</div>
+            <div className="text-2xl font-bold text-green-800">{getStatusCount('delivered')}</div>
             <div className="text-sm text-green-600">Delivered</div>
           </div>
         </div>

@@ -71,21 +71,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (response.ok) {
         const data = await response.json();
-        setUser({
-            ...data.user,
-            loyalty: data.loyalty
-          });
+        const userData = {
+          ...data.user,
+          loyalty: data.loyalty
+        };
+        setUser(userData);
+        localStorage.setItem('dashboard_user', JSON.stringify(userData));
       } else {
         // Token is invalid, clear it
-        localStorage.removeItem('token');
+        localStorage.removeItem('dashboard_token');
+        localStorage.removeItem('dashboard_user');
         setToken(null);
         setUser(null);
       }
     } catch (error) {
-        console.error('Error fetching user:', error);
-        localStorage.removeItem('token');
-        setToken(null);
-        setUser(null);
+      console.error('Error fetching user:', error);
+      localStorage.removeItem('dashboard_token');
+      localStorage.removeItem('dashboard_user');
+      setToken(null);
+      setUser(null);
     }
   };
 
@@ -107,8 +111,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (response.ok) {
         setToken(data.token);
         setUser(data.user);
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem('dashboard_token', data.token);
+        localStorage.setItem('dashboard_user', JSON.stringify(data.user));
       } else {
         setError(data.message || 'Login failed');
       }
@@ -118,7 +122,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(false);
     }
   };
-
 
   const logout = () => {
     setUser(null);

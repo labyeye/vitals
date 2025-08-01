@@ -37,10 +37,9 @@ function App() {
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/order/:orderId" element={<OrderDetailPage />} />
+              <Route path="/order/:id" element={<OrderDetailPage />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/product/:productId" element={<ProductDetailsPage />} />
-              <Route path="/order/:orderId" element={<OrderDetailPage />} />
               <Route path="/checkout" element={<CheckoutPage />} />
             </Routes>
             <Footer />

@@ -1,38 +1,147 @@
-import React from 'react';
-import { ArrowLeft, Mail, Phone, MapPin, CreditCard, Package, TrendingUp, Calendar } from 'lucide-react';
-import { Customer } from '../types/dashboard';
+import React, { useEffect, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { ArrowLeft, Mail, Phone, MapPin, CreditCard, Package, TrendingUp, Calendar, Gift, Star, Award, Crown, Loader2, AlertCircle } from 'lucide-react';
 
 interface CustomerDetailsProps {
-  customer: Customer;
+  customerId: string;
   onBack: () => void;
 }
 
-const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customer, onBack }) => {
-  const getSegmentColor = (segment: string) => {
-    switch (segment) {
-      case 'VIP': return 'bg-purple-100 text-purple-800';
-      case 'Regular': return 'bg-blue-100 text-blue-800';
-      case 'New': return 'bg-green-100 text-green-800';
-      case 'At-Risk': return 'bg-red-100 text-red-800';
+interface Customer {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  isActive: boolean;
+  createdAt: string;
+  lastLogin?: string;
+  loyaltyTier?: string;
+  loyaltyPoints?: number;
+  evolvPoints?: number;
+  address?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    country?: string;
+  };
+}
+
+interface CustomerStats {
+  totalOrders: number;
+  totalSpent: number;
+  averageOrderValue: number;
+  lastOrderDate?: string;
+}
+
+const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customerId, onBack }) => {
+  const { token } = useAuth();
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [stats, setStats] = useState<CustomerStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchCustomerDetails = async () => {
+      if (!token || !customerId) return;
+
+      try {
+        setLoading(true);
+        setError('');
+
+        const response = await fetch(`http://localhost:3500/api/admin/users/${customerId}/details`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to fetch customer details');
+        }
+
+        const data = await response.json();
+        setCustomer(data.data.customer);
+        setStats(data.data.stats);
+      } catch (err: any) {
+        console.error('Customer details fetch error:', err);
+        setError(err.message || 'Failed to fetch customer details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCustomerDetails();
+  }, [token, customerId]);
+
+  const getSegmentColor = (tier: string) => {
+    switch (tier) {
+      case 'gold': return 'bg-yellow-100 text-yellow-800';
+      case 'silver': return 'bg-gray-100 text-gray-800';
+      case 'bronze': return 'bg-orange-100 text-orange-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const recentOrders = [
-    { id: 'ORD-001', date: '2024-01-15', total: 125.99, status: 'Delivered', items: 3 },
-    { id: 'ORD-002', date: '2024-01-10', total: 89.99, status: 'Shipped', items: 2 },
-    { id: 'ORD-003', date: '2024-01-05', total: 199.99, status: 'Delivered', items: 4 },
-    { id: 'ORD-004', date: '2023-12-28', total: 45.50, status: 'Delivered', items: 1 },
-    { id: 'ORD-005', date: '2023-12-20', total: 299.99, status: 'Delivered', items: 5 }
-  ];
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
 
-  const activityLog = [
-    { action: 'Placed order ORD-001', date: '2024-01-15 10:30 AM', type: 'order' },
-    { action: 'Added items to wishlist', date: '2024-01-14 3:45 PM', type: 'wishlist' },
-    { action: 'Viewed product: Wireless Headphones', date: '2024-01-14 2:20 PM', type: 'view' },
-    { action: 'Opened email campaign', date: '2024-01-13 9:15 AM', type: 'email' },
-    { action: 'Updated shipping address', date: '2024-01-12 4:30 PM', type: 'profile' }
-  ];
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+          <div className="flex items-center space-x-2 mb-3">
+            <AlertCircle className="w-5 h-5 text-red-600" />
+            <h2 className="font-semibold text-red-900">Error Loading Customer</h2>
+          </div>
+          <p className="text-red-700">{error}</p>
+          <button
+            onClick={onBack}
+            className="mt-4 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!customer) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
+          <div className="flex items-center space-x-2 mb-3">
+            <AlertCircle className="w-5 h-5 text-yellow-600" />
+            <h2 className="font-semibold text-yellow-900">Customer Not Found</h2>
+          </div>
+          <p className="text-yellow-700">The customer you're looking for doesn't exist.</p>
+          <button
+            onClick={onBack}
+            className="mt-4 px-4 py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -46,13 +155,13 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customer, onBack }) =
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{customer.name}</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{customer.firstName} {customer.lastName}</h1>
             <p className="text-gray-600 mt-1">{customer.email}</p>
           </div>
         </div>
         <div className="flex items-center space-x-3">
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getSegmentColor(customer.segment)}`}>
-            {customer.segment}
+          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getSegmentColor(customer.loyaltyTier || 'bronze')}`}>
+            {customer.loyaltyTier?.toUpperCase() || 'BRONZE'} Tier
           </span>
           <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
             <Mail className="w-4 h-4" />
@@ -73,7 +182,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customer, onBack }) =
                   <TrendingUp className="w-8 h-8 text-blue-600" />
                   <div>
                     <p className="text-sm text-blue-600 font-medium">Lifetime Value</p>
-                    <p className="text-2xl font-bold text-blue-900">${customer.lifetimeValue.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-blue-900">₹{stats?.totalSpent?.toFixed(2) || '0.00'}</p>
                   </div>
                 </div>
               </div>
@@ -82,7 +191,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customer, onBack }) =
                   <Package className="w-8 h-8 text-green-600" />
                   <div>
                     <p className="text-sm text-green-600 font-medium">Total Orders</p>
-                    <p className="text-2xl font-bold text-green-900">{customer.totalOrders}</p>
+                    <p className="text-2xl font-bold text-green-900">{stats?.totalOrders || 0}</p>
                   </div>
                 </div>
               </div>
@@ -91,146 +200,181 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customer, onBack }) =
                   <Calendar className="w-8 h-8 text-purple-600" />
                   <div>
                     <p className="text-sm text-purple-600 font-medium">Avg. Order Value</p>
-                    <p className="text-2xl font-bold text-purple-900">${(customer.lifetimeValue / customer.totalOrders).toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-purple-900">
+                      ₹{stats && stats.totalOrders > 0 ? (stats.totalSpent / stats.totalOrders).toFixed(2) : '0.00'}
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Order History */}
+          {/* Loyalty Information */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6">Order History</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order ID</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Items</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {recentOrders.map((order) => (
-                    <tr key={order.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{order.id}</td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{new Date(order.date).toLocaleDateString()}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900">{order.items}</td>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">${order.total.toFixed(2)}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          order.status === 'Delivered' ? 'bg-green-100 text-green-800' :
-                          order.status === 'Shipped' ? 'bg-blue-100 text-blue-800' :
-                          'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {order.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        <button className="text-blue-600 hover:text-blue-900">View</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="flex items-center gap-3 mb-4">
+              <Gift className="w-6 h-6 text-green-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Loyalty Information</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Current Tier */}
+              <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg">
+                <div className="flex items-center gap-3 mb-3">
+                  {customer.loyaltyTier === 'bronze' && <Star className="w-6 h-6 text-[#CD7F32]" />}
+                  {customer.loyaltyTier === 'silver' && <Award className="w-6 h-6 text-[#C0C0C0]" />}
+                  {customer.loyaltyTier === 'gold' && <Crown className="w-6 h-6 text-[#FFD700]" />}
+                  <h4 className="font-semibold capitalize">{customer.loyaltyTier || 'bronze'} Tier</h4>
+                </div>
+                <p className="text-gray-600 text-sm">
+                  Current tier with {customer.loyaltyPoints || 0} points
+                </p>
+              </div>
+
+              {/* Points Summary */}
+              <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg">
+                <div className="flex items-center gap-3 mb-3">
+                  <Gift className="w-6 h-6 text-green-600" />
+                  <h4 className="font-semibold">Points Summary</h4>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Loyalty Points:</span>
+                    <span className="font-medium">{customer.loyaltyPoints || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Evolv Points:</span>
+                    <span className="font-medium">{customer.evolvPoints || 0}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Total Points:</span>
+                    <span className="font-medium">{(customer.loyaltyPoints || 0) + (customer.evolvPoints || 0)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Progress to Next Tier */}
+              <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg">
+                <h4 className="font-semibold mb-3">Progress to Next Tier</h4>
+                <div className="space-y-2 text-sm">
+                  {customer.loyaltyTier === 'bronze' && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Current:</span>
+                        <span className="font-medium">{customer.loyaltyPoints || 0} / 5000</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-green-600 h-2 rounded-full transition-all duration-500" 
+                          style={{ width: `${Math.min(100, ((customer.loyaltyPoints || 0) / 5000) * 100)}%` }}
+                        ></div>
+                      </div>
+                      <p className="text-xs text-gray-500">Next: Silver Tier</p>
+                    </>
+                  )}
+                  {customer.loyaltyTier === 'silver' && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Current:</span>
+                        <span className="font-medium">{customer.loyaltyPoints || 0} / 10000</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-green-600 h-2 rounded-full transition-all duration-500" 
+                          style={{ width: `${Math.min(100, ((customer.loyaltyPoints || 0) / 10000) * 100)}%` }}
+                        ></div>
+                      </div>
+                      <p className="text-xs text-gray-500">Next: Gold Tier</p>
+                    </>
+                  )}
+                  {customer.loyaltyTier === 'gold' && (
+                    <div className="text-center">
+                      <Crown className="w-8 h-8 text-[#FFD700] mx-auto mb-2" />
+                      <p className="text-sm font-medium">Maximum Tier Achieved!</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Activity Timeline */}
+          {/* Contact Information */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6">Recent Activity</h3>
-            <div className="space-y-4">
-              {activityLog.map((activity, index) => (
-                <div key={index} className="flex items-start space-x-3">
-                  <div className={`w-2 h-2 rounded-full mt-2 ${
-                    activity.type === 'order' ? 'bg-green-500' :
-                    activity.type === 'email' ? 'bg-blue-500' :
-                    activity.type === 'view' ? 'bg-purple-500' :
-                    'bg-gray-500'
-                  }`} />
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-900">{activity.action}</p>
-                    <p className="text-xs text-gray-500">{activity.date}</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">Contact Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 className="font-medium text-gray-900 mb-3">Personal Details</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3">
+                    <Mail className="w-5 h-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Email</p>
+                      <p className="font-medium text-gray-900">{customer.email}</p>
+                    </div>
+                  </div>
+                  {customer.phone && (
+                    <div className="flex items-center space-x-3">
+                      <Phone className="w-5 h-5 text-gray-400" />
+                      <div>
+                        <p className="text-sm text-gray-500">Phone</p>
+                        <p className="font-medium text-gray-900">{customer.phone}</p>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-center space-x-3">
+                    <Calendar className="w-5 h-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm text-gray-500">Member Since</p>
+                      <p className="font-medium text-gray-900">{formatDate(customer.createdAt)}</p>
+                    </div>
                   </div>
                 </div>
-              ))}
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-900 mb-3">Address</h4>
+                <div className="flex items-start space-x-3">
+                  <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
+                  <div className="text-sm text-gray-700">
+                    {customer.address ? (
+                      <>
+                        <p>{customer.address.street}</p>
+                        <p>{customer.address.city}, {customer.address.state}</p>
+                        <p>{customer.address.zipCode}, {customer.address.country}</p>
+                      </>
+                    ) : (
+                      <p className="text-gray-500">No address provided</p>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Contact Information */}
+          {/* Customer Status */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h4 className="font-semibold text-gray-900 mb-4">Contact Information</h4>
+            <h4 className="font-semibold text-gray-900 mb-4">Customer Status</h4>
             <div className="space-y-3">
-              <div className="flex items-center space-x-3">
-                <Mail className="w-4 h-4 text-gray-400" />
-                <span className="text-sm text-gray-900">{customer.email}</span>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Account Status</span>
+                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                  customer.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                }`}>
+                  {customer.isActive ? 'Active' : 'Inactive'}
+                </span>
               </div>
-              <div className="flex items-center space-x-3">
-                <Phone className="w-4 h-4 text-gray-400" />
-                <span className="text-sm text-gray-900">+1 (555) 123-4567</span>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Last Login</span>
+                <span className="text-sm text-gray-900">
+                  {customer.lastLogin ? formatDate(customer.lastLogin) : 'Never'}
+                </span>
               </div>
-              <div className="flex items-start space-x-3">
-                <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
-                <div className="text-sm text-gray-900">
-                  <p>123 Main Street</p>
-                  <p>New York, NY 10001</p>
-                  <p>United States</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Customer Stats */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h4 className="font-semibold text-gray-900 mb-4">Customer Statistics</h4>
-            <div className="space-y-4">
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">First Order</span>
-                <span className="text-sm font-medium text-gray-900">Dec 15, 2023</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Last Activity</span>
-                <span className="text-sm font-medium text-gray-900">{new Date(customer.lastActivity).toLocaleDateString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Order Frequency</span>
-                <span className="text-sm font-medium text-gray-900">Every 12 days</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Return Rate</span>
-                <span className="text-sm font-medium text-green-600">2.1%</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Email Open Rate</span>
-                <span className="text-sm font-medium text-blue-600">68%</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Payment Methods */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h4 className="font-semibold text-gray-900 mb-4">Payment Methods</h4>
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                <CreditCard className="w-5 h-5 text-gray-400" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">•••• •••• •••• 4242</p>
-                  <p className="text-xs text-gray-500">Expires 12/25</p>
-                </div>
-                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Primary</span>
-              </div>
-              <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                <CreditCard className="w-5 h-5 text-gray-400" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">•••• •••• •••• 8888</p>
-                  <p className="text-xs text-gray-500">Expires 08/26</p>
-                </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Loyalty Tier</span>
+                <span className={`px-2 py-1 rounded text-xs font-medium ${getSegmentColor(customer.loyaltyTier || 'bronze')}`}>
+                  {customer.loyaltyTier?.toUpperCase() || 'BRONZE'}
+                </span>
               </div>
             </div>
           </div>
@@ -240,16 +384,28 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customer, onBack }) =
             <h4 className="font-semibold text-gray-900 mb-4">Quick Actions</h4>
             <div className="space-y-3">
               <button className="w-full text-left px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors">
-                Send Marketing Email
+                <div className="flex items-center space-x-2">
+                  <Mail className="w-4 h-4" />
+                  <span>Send Email</span>
+                </div>
               </button>
               <button className="w-full text-left px-4 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors">
-                Create Discount Code
+                <div className="flex items-center space-x-2">
+                  <Gift className="w-4 h-4" />
+                  <span>Add Loyalty Points</span>
+                </div>
               </button>
               <button className="w-full text-left px-4 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors">
-                Add to VIP List
+                <div className="flex items-center space-x-2">
+                  <Package className="w-4 h-4" />
+                  <span>View Orders</span>
+                </div>
               </button>
-              <button className="w-full text-left px-4 py-2 bg-gray-50 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors">
-                View Full Profile
+              <button className="w-full text-left px-4 py-2 bg-yellow-50 text-yellow-700 rounded-lg hover:bg-yellow-100 transition-colors">
+                <div className="flex items-center space-x-2">
+                  <CreditCard className="w-4 h-4" />
+                  <span>Payment History</span>
+                </div>
               </button>
             </div>
           </div>

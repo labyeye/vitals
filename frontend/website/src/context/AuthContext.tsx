@@ -8,7 +8,6 @@ interface User {
   role: 'admin' | 'customer';
   phone?: string;
   createdAt: string | Date;
-
   address?: {
     street?: string;
     city?: string;
@@ -18,13 +17,10 @@ interface User {
   };
   isActive: boolean;
   isEmailVerified: boolean;
-  loyalty?: {
-    points?: number;
-    tier?: string;
-    nextTierPoints?: number;
-    progressToNextTier?: number;
-    history?: any[];
-  };
+  loyaltyPoints?: number;
+  evolvPoints?: number;
+  loyaltyTier?: string;
+  loyaltyHistory?: any[];
   avatar?: string;
 }
 
@@ -88,6 +84,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const fetchUser = async () => {
     try {
+      // First get basic user data
       const response = await fetch(`${API_BASE_URL}/auth/me`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -97,7 +94,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (response.ok) {
         const data = await response.json();
-        setUser(data.user);
+        console.log('AuthContext - Basic user data:', data.user);
+        
+        // Then get customer profile with loyalty data
+        if (data.user.role === 'customer') {
+          try {
+            const profileResponse = await fetch(`${API_BASE_URL}/customer/profile`, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+            });
+            
+            if (profileResponse.ok) {
+              const profileData = await profileResponse.json();
+              console.log('AuthContext - Profile data:', profileData.data);
+              // Merge the data
+              const mergedUser = {
+                ...data.user,
+                ...profileData.data
+              };
+              console.log('AuthContext - Merged user data:', mergedUser);
+              setUser(mergedUser);
+            } else {
+              console.log('AuthContext - Profile fetch failed, using basic user data');
+              setUser(data.user);
+            }
+          } catch (profileError) {
+            console.error('Error fetching profile:', profileError);
+            setUser(data.user);
+          }
+        } else {
+          setUser(data.user);
+        }
       } else {
         // Token is invalid, clear it
         localStorage.removeItem('token');

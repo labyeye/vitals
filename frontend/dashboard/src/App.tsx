@@ -11,6 +11,7 @@ import ProductDetails from './components/ProductDetails';
 import CustomerDetails from './components/CustomerDetails';
 import OrderDetails from './components/OrderDetails';
 import CampaignDetails from './components/CampaignDetails';
+import Analytics from './components/Analytics';
 import Login from './components/Login';
 import { mockData } from './data/mockData';
 
@@ -80,7 +81,7 @@ function DashboardApp() {
           if (customer) {
             return (
               <CustomerDetails
-                customer={customer}
+                customerId={currentView.itemId || ''}
                 onBack={() => setCurrentView({ section: 'customers', view: 'list' })}
               />
             );
@@ -91,7 +92,7 @@ function DashboardApp() {
           if (order) {
             return (
               <OrderDetails
-                order={order}
+                orderId={currentView.itemId || ''}
                 onBack={() => setCurrentView({ section: 'orders', view: 'list' })}
               />
             );
@@ -149,7 +150,7 @@ function DashboardApp() {
           />
         );
       case 'analytics':
-        return <div className="p-8 text-center text-gray-500">Analytics section coming soon...</div>;
+        return <Analytics />;
       case 'alerts':
         return <div className="p-8 text-center text-gray-500">Alerts section coming soon...</div>;
       case 'security':

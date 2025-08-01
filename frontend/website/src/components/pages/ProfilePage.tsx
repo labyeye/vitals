@@ -45,13 +45,19 @@ const ProfilePage: React.FC = () => {
     }
   });
   const [saving, setSaving] = useState(false);
-  const [loyaltyInfo, setLoyaltyInfo] = useState<any>(null);
   const [orderStats, setOrderStats] = useState<any>(null);
   const [totalSpent, setTotalSpent] = useState(0);
 
   useEffect(() => {
     if (!user) {
       navigate('/login');
+    } else {
+      console.log('ProfilePage - User data:', user);
+      console.log('ProfilePage - User loyalty data:', {
+        loyaltyPoints: user.loyaltyPoints,
+        evolvPoints: user.evolvPoints,
+        loyaltyTier: user.loyaltyTier
+      });
     }
   }, [user, navigate]);
 
@@ -131,12 +137,14 @@ const ProfilePage: React.FC = () => {
     avatar: user.avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80",
     totalOrders: orderStats?.total || 0,
     totalSpent: orderStats?.totalSpent || 0,
-    loyaltyPoints: loyaltyInfo?.points || 0,
-    evolvPoints: loyaltyInfo?.evolvPoints || 0,
-    currentTier: loyaltyInfo?.tier || 'bronze',
-    nextTier: loyaltyInfo?.nextTier || 'silver',
-    progressToNextTier: loyaltyInfo?.progressToNextTier || 0,
-    nextTierPoints: loyaltyInfo?.nextTierPoints || 5000
+    loyaltyPoints: user.loyaltyPoints || 0,
+    evolvPoints: user.evolvPoints || 0,
+    currentTier: user.loyaltyTier || 'bronze',
+    nextTier: user.loyaltyTier === 'bronze' ? 'silver' : user.loyaltyTier === 'silver' ? 'gold' : 'gold',
+    progressToNextTier: user.loyaltyTier === 'gold' ? 100 : 
+      user.loyaltyTier === 'bronze' ? Math.min(100, Math.floor((user.loyaltyPoints || 0) / 5000 * 100)) :
+      Math.min(100, Math.floor((user.loyaltyPoints || 0) / 10000 * 100)),
+    nextTierPoints: user.loyaltyTier === 'bronze' ? 5000 : user.loyaltyTier === 'silver' ? 10000 : 0
   };
   const tiers = [
     { name: "Bronze", minPoints: 0, maxPoints: 4999, color: "#CD7F32", icon: Star },
@@ -170,7 +178,7 @@ const ProfilePage: React.FC = () => {
   }, [activeTab, user, token]);
   useEffect(() => {
     if (user && token) {
-      const fetchLoyaltyAndStats = async () => {
+      const fetchDashboardData = async () => {
         try {
           const response = await fetch('http://localhost:3500/api/customer/dashboard', {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -181,39 +189,15 @@ const ProfilePage: React.FC = () => {
           if (response.ok) {
             setOrderStats(data.data.orderStats);
             setTotalSpent(data.data.orderStats?.totalSpent || 0);
-            
-            // Get user profile for loyalty info
-            const userResponse = await fetch('http://localhost:3500/api/customer/profile', {
-              headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const userData = await userResponse.json();
-  
-            // Calculate progress for display
-            const nextTierPoints = userData.data.loyaltyTier === 'bronze' ? 5000 :
-              userData.data.loyaltyTier === 'silver' ? 10000 : 0;
-            const progress = userData.data.loyaltyTier === 'gold' ? 100 :
-              Math.min(100, Math.floor((userData.data.loyaltyPoints / nextTierPoints) * 100));
-  
-            setLoyaltyInfo({
-              points: userData.data.loyaltyPoints,
-              evolvPoints: userData.data.evolvPoints,
-              tier: userData.data.loyaltyTier,
-              nextTier: userData.data.loyaltyTier === 'bronze' ? 'silver' : 'gold',
-              nextTierPoints,
-              progressToNextTier: progress
-            });
           }
         } catch (error) {
-          console.error('Error fetching data:', error);
+          console.error('Error fetching dashboard data:', error);
         }
       };
   
-      fetchLoyaltyAndStats();
+      fetchDashboardData();
     }
   }, [user, token]);
-
-  const getCurrentTier = () => tiers.find(tier => tier.name === userData.currentTier);
-  const getNextTier = () => tiers.find(tier => tier.name === userData.nextTier);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F4F1E9] via-white to-[#B1D182]/10 pt-24">
@@ -443,7 +427,7 @@ const ProfilePage: React.FC = () => {
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-[#2B463C] font-medium">Loyalty Points Earned:</span>
                             <span className="text-[#688F4E] font-bold">
-                              {Math.floor(order.total)} points (Tier) + {Math.floor(order.total * (loyaltyInfo?.tier === 'bronze' ? 0.10 : loyaltyInfo?.tier === 'silver' ? 0.15 : 0.20))} points (Evolv)
+                              {Math.floor(order.total)} points (Tier) + {Math.floor(order.total * (user.loyaltyTier === 'bronze' ? 0.10 : user.loyaltyTier === 'silver' ? 0.15 : 0.20))} points (Evolv)
                             </span>
                           </div>
                         </div>

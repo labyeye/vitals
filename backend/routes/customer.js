@@ -8,6 +8,29 @@ const User = require('../models/User');
 
 const router = express.Router();
 
+// Helper function to get loyalty details
+const getLoyaltyDetails = async (userId) => {
+  try {
+    const user = await User.findById(userId);
+    if (!user) return null;
+
+    const nextTierInfo = user.getNextLoyaltyTier();
+    
+    return {
+      points: user.loyaltyPoints,
+      evolvPoints: user.evolvPoints,
+      tier: user.loyaltyTier,
+      nextTier: nextTierInfo.nextTier,
+      nextTierPoints: nextTierInfo.pointsNeeded,
+      progressToNextTier: nextTierInfo.progress,
+      history: user.loyaltyHistory || []
+    };
+  } catch (error) {
+    console.error('Error getting loyalty details:', error);
+    return null;
+  }
+};
+
 // Apply customer protection to all routes
 router.use(protect, isCustomer);
 
@@ -63,6 +86,13 @@ router.get('/dashboard', async (req, res) => {
       }
     ]);
 
+    // Get user and recalculate tier
+    const user = await User.findById(req.user._id);
+    if (user) {
+      user.recalculateTier();
+      await user.save();
+    }
+
     // Get loyalty details
     const loyaltyDetails = await getLoyaltyDetails(req.user._id);
 
@@ -93,10 +123,23 @@ router.get('/dashboard', async (req, res) => {
 router.get('/profile', async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select('-password');
+    
+    // Recalculate tier based on current points
+    user.recalculateTier();
+    await user.save();
+    
+    // Get loyalty details
+    const loyaltyDetails = await getLoyaltyDetails(req.user._id);
+    
+    // Combine user data with loyalty details
+    const profileData = {
+      ...user.toObject(),
+      loyalty: loyaltyDetails
+    };
 
     res.status(200).json({
       success: true,
-      data: user
+      data: profileData
     });
   } catch (error) {
     console.error('Get profile error:', error);
@@ -373,7 +416,7 @@ router.put('/orders/:id/status', [
       await order.save();
 
       // Add bonus loyalty points for delivery confirmation
-      const loyalty = await Loyalty.findOne({ user: req.user._id });
+      const loyalty = await User.findOne({ user: req.user._id });
       if (loyalty && order.payment.status === 'paid') {
         const bonusPoints = Math.floor(order.total / 50); // 2 points per ₹100 for delivery bonus
         loyalty.points += bonusPoints;
@@ -463,19 +506,26 @@ router.get('/orders/:id/details', async (req, res) => {
       });
     }
 
-    // Get loyalty information
-    const loyalty = await Loyalty.findOne({ user: req.user._id });
-    const loyaltyInfo = loyalty ? {
-      currentPoints: loyalty.points,
-      currentTier: loyalty.tier,
-      nextTierPoints: loyalty.nextTierPoints,
-      progressToNextTier: loyalty.tier === 'gold' ? 100 :
-        Math.min(100, Math.floor((loyalty.points / loyalty.nextTierPoints) * 100))
+    // Get user loyalty information
+    const user = await User.findById(req.user._id);
+    if (user) {
+      // Recalculate tier based on current points
+      user.recalculateTier();
+      await user.save();
+    }
+
+    const loyaltyInfo = user ? {
+      currentPoints: user.loyaltyPoints || 0,
+      currentTier: user.loyaltyTier || 'bronze',
+      nextTierPoints: user.loyaltyTier === 'bronze' ? 5000 : user.loyaltyTier === 'silver' ? 10000 : 0,
+      progressToNextTier: user.loyaltyTier === 'gold' ? 100 : 
+        user.loyaltyTier === 'bronze' ? Math.min(100, Math.floor((user.loyaltyPoints || 0) / 5000 * 100)) :
+        Math.min(100, Math.floor((user.loyaltyPoints || 0) / 10000 * 100))
     } : null;
 
     // Calculate points earned from this order
-    const pointsEarned = Math.floor(order.total / 100);
-    const deliveryBonusPoints = order.status === 'delivered' ? Math.floor(order.total / 50) : 0;
+    const pointsEarned = Math.floor(order.total);
+    const deliveryBonusPoints = order.status === 'delivered' ? Math.floor(order.total * 0.1) : 0;
 
     res.status(200).json({
       success: true,

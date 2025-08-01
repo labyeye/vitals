@@ -124,6 +124,18 @@ userSchema.methods.getPublicProfile = function () {
 userSchema.statics.findByEmail = function (email) {
   return this.findOne({ email: email.toLowerCase() });
 };
+userSchema.methods.recalculateTier = function() {
+  // Recalculate tier based on current points
+  if (this.loyaltyPoints >= 10000) {
+    this.loyaltyTier = 'gold';
+  } else if (this.loyaltyPoints >= 5000) {
+    this.loyaltyTier = 'silver';
+  } else {
+    this.loyaltyTier = 'bronze';
+  }
+  
+  return this.loyaltyTier;
+};
 userSchema.methods.getNextLoyaltyTier = function() {
   if (this.loyaltyTier === 'bronze') {
     return {

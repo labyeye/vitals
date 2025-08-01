@@ -32,15 +32,27 @@ router.get('/dashboard', async (req, res) => {
       'stock.trackStock': true
     }).limit(10);
 
-    // Get revenue stats (last 30 days)
+    // Get total revenue from all orders
+    const totalRevenueResult = await Order.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalRevenue: { $sum: '$total' },
+          orderCount: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const totalRevenue = totalRevenueResult[0]?.totalRevenue || 0;
+
+    // Get revenue stats (last 30 days) for recent orders
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const recentOrdersRevenue = await Order.aggregate([
       {
         $match: {
-          createdAt: { $gte: thirtyDaysAgo },
-          'payment.status': 'paid'
+          createdAt: { $gte: thirtyDaysAgo }
         }
       },
       {
@@ -52,7 +64,7 @@ router.get('/dashboard', async (req, res) => {
       }
     ]);
 
-    const revenueStats = recentOrdersRevenue[0] || { totalRevenue: 0, orderCount: 0 };
+    const recentRevenueStats = recentOrdersRevenue[0] || { totalRevenue: 0, orderCount: 0 };
 
     // Get order status counts
     const orderStatusCounts = await Order.aggregate([
@@ -71,8 +83,8 @@ router.get('/dashboard', async (req, res) => {
           totalUsers,
           totalProducts,
           totalOrders,
-          totalRevenue: revenueStats.totalRevenue,
-          recentOrderCount: revenueStats.orderCount
+          totalRevenue: totalRevenue,
+          recentOrderCount: recentRevenueStats.orderCount
         },
         recentOrders,
         lowStockProducts,
@@ -180,6 +192,55 @@ router.get('/users/:id', async (req, res) => {
   }
 });
 
+// @desc    Get customer details with stats
+// @route   GET /api/admin/users/:id/details
+// @access  Admin only
+router.get('/users/:id/details', async (req, res) => {
+  try {
+    const customer = await User.findById(req.params.id).select('-password');
+
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        message: 'Customer not found'
+      });
+    }
+
+    // Get customer order statistics
+    const orderStats = await Order.aggregate([
+      { $match: { customer: customer._id } },
+      {
+        $group: {
+          _id: null,
+          totalOrders: { $sum: 1 },
+          totalSpent: { $sum: '$total' },
+          averageOrderValue: { $avg: '$total' }
+        }
+      }
+    ]);
+
+    const stats = orderStats[0] || {
+      totalOrders: 0,
+      totalSpent: 0,
+      averageOrderValue: 0
+    };
+
+    res.status(200).json({
+      success: true,
+      data: {
+        customer,
+        stats
+      }
+    });
+  } catch (error) {
+    console.error('Get customer details error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching customer details'
+    });
+  }
+});
+
 // @desc    Update user status
 // @route   PUT /api/admin/users/:id/status
 // @access  Admin only
@@ -281,6 +342,52 @@ router.get('/orders', async (req, res) => {
   }
 });
 
+// @desc    Get order details with loyalty info
+// @route   GET /api/admin/orders/:id/details
+// @access  Admin only
+router.get('/orders/:id/details', async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id)
+      .populate('customer', 'firstName lastName email phone loyaltyPoints loyaltyTier evolvPoints')
+      .populate('items.product', 'name price images description');
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    // Calculate loyalty points earned from this order
+    const pointsEarned = Math.floor(order.total);
+    const deliveryBonusPoints = order.status === 'delivered' ? Math.floor(order.total * 0.1) : 0;
+    const totalPointsFromOrder = pointsEarned + deliveryBonusPoints;
+
+    // Get loyalty information
+    const loyaltyInfo = {
+      pointsEarned,
+      deliveryBonusPoints,
+      totalPointsFromOrder,
+      customerTier: order.customer.loyaltyTier || 'bronze',
+      customerPoints: order.customer.loyaltyPoints || 0
+    };
+
+    res.status(200).json({
+      success: true,
+      data: {
+        order,
+        loyaltyInfo
+      }
+    });
+  } catch (error) {
+    console.error('Get order details error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching order details'
+    });
+  }
+});
+
 // @desc    Get order by ID
 // @route   GET /api/admin/orders/:id
 // @access  Admin only
@@ -334,7 +441,7 @@ router.put('/orders/:id/status', [
 
     const { status, notes } = req.body;
 
-    const order = await Order.findById(req.params.id);
+    const order = await Order.findById(req.params.id).populate('customer');
     if (!order) {
       return res.status(404).json({
         success: false,
@@ -346,8 +453,38 @@ router.put('/orders/:id/status', [
     await order.updateStatus(status, notes, req.user._id);
 
     // Update loyalty points if order is delivered
-    if (status === 'delivered') {
-      await loyaltyController.updateLoyaltyPoints(order._id);
+    if (status === 'delivered' && order.customer) {
+      const pointsEarned = Math.floor(order.total);
+      const deliveryBonusPoints = Math.floor(order.total * 0.1);
+      const totalPoints = pointsEarned + deliveryBonusPoints;
+
+      // Update customer's loyalty points
+      await User.findByIdAndUpdate(order.customer._id, {
+        $inc: { 
+          loyaltyPoints: totalPoints,
+          evolvPoints: pointsEarned
+        }
+      });
+
+      // Add to loyalty history
+      await User.findByIdAndUpdate(order.customer._id, {
+        $push: {
+          loyaltyHistory: {
+            type: 'order_completion',
+            points: totalPoints,
+            orderId: order._id,
+            orderNumber: order.orderNumber,
+            description: `Order ${order.orderNumber} completed - ${pointsEarned} points + ${deliveryBonusPoints} bonus`
+          }
+        }
+      });
+
+      // Recalculate tier
+      const customer = await User.findById(order.customer._id);
+      if (customer) {
+        customer.recalculateTier();
+        await customer.save();
+      }
     }
 
     // Update product stock if order is cancelled or refunded
@@ -359,10 +496,15 @@ router.put('/orders/:id/status', [
       }
     }
 
+    // Get updated order with populated data
+    const updatedOrder = await Order.findById(req.params.id)
+      .populate('customer', 'firstName lastName email phone loyaltyPoints loyaltyTier evolvPoints')
+      .populate('items.product', 'name price images description');
+
     res.status(200).json({
       success: true,
       message: 'Order status updated successfully',
-      data: order
+      data: updatedOrder
     });
   } catch (error) {
     console.error('Update order status error:', error);
@@ -533,6 +675,293 @@ router.delete('/products/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error deleting product'
+    });
+  }
+});
+
+// @desc    Get analytics data
+// @route   GET /api/admin/analytics
+// @access  Admin only
+router.get('/analytics', async (req, res) => {
+  try {
+    const days = parseInt(req.query.days) || 30;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    
+    const previousStartDate = new Date(startDate);
+    previousStartDate.setDate(previousStartDate.getDate() - days);
+
+    // Get current period data
+    const currentPeriodData = await Order.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: startDate }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalRevenue: { $sum: '$total' },
+          totalOrders: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Get previous period data for comparison
+    const previousPeriodData = await Order.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: previousStartDate, $lt: startDate }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalRevenue: { $sum: '$total' },
+          totalOrders: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const currentRevenue = currentPeriodData[0]?.totalRevenue || 0;
+    const currentOrders = currentPeriodData[0]?.totalOrders || 0;
+    const previousRevenue = previousPeriodData[0]?.totalRevenue || 0;
+    const previousOrders = previousPeriodData[0]?.totalOrders || 0;
+
+    // Calculate growth percentages
+    const revenueGrowth = previousRevenue > 0 ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 : 0;
+    const orderGrowth = previousOrders > 0 ? ((currentOrders - previousOrders) / previousOrders) * 100 : 0;
+
+    // Get order status counts
+    const orderStatusCounts = await Order.aggregate([
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const totalOrders = await Order.countDocuments();
+    const pendingOrders = orderStatusCounts.find(s => s._id === 'pending')?.count || 0;
+    const deliveredOrders = orderStatusCounts.find(s => s._id === 'delivered')?.count || 0;
+    const cancelledOrders = orderStatusCounts.find(s => s._id === 'cancelled')?.count || 0;
+
+    // Get customer data
+    const totalCustomers = await User.countDocuments({ role: 'customer' });
+    const newCustomers = await User.countDocuments({ 
+      role: 'customer', 
+      createdAt: { $gte: startDate } 
+    });
+    const activeCustomers = await Order.distinct('customer', { createdAt: { $gte: startDate } });
+    const customerGrowth = totalCustomers > 0 ? (newCustomers / totalCustomers) * 100 : 0;
+
+    // Get product data
+    const totalProducts = await Product.countDocuments();
+    const lowStockProducts = await Product.countDocuments({
+      'stock.quantity': { $lte: 10 },
+      'stock.trackStock': true
+    });
+    const outOfStockProducts = await Product.countDocuments({
+      'stock.quantity': { $eq: 0 },
+      'stock.trackStock': true
+    });
+
+    // Get top products by revenue
+    const topProducts = await Order.aggregate([
+      {
+        $unwind: '$items'
+      },
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'items.product',
+          foreignField: '_id',
+          as: 'product'
+        }
+      },
+      {
+        $unwind: '$product'
+      },
+      {
+        $group: {
+          _id: '$items.product',
+          name: { $first: '$product.name' },
+          sales: { $sum: '$items.quantity' },
+          revenue: { $sum: { $multiply: ['$items.price', '$items.quantity'] } }
+        }
+      },
+      {
+        $sort: { revenue: -1 }
+      },
+      {
+        $limit: 5
+      }
+    ]);
+
+    // Get top customers by spending
+    const topCustomers = await Order.aggregate([
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'customer',
+          foreignField: '_id',
+          as: 'customer'
+        }
+      },
+      {
+        $unwind: '$customer'
+      },
+      {
+        $group: {
+          _id: '$customer',
+          firstName: { $first: '$customer.firstName' },
+          lastName: { $first: '$customer.lastName' },
+          totalOrders: { $sum: 1 },
+          totalSpent: { $sum: '$total' }
+        }
+      },
+      {
+        $sort: { totalSpent: -1 }
+      },
+      {
+        $limit: 5
+      }
+    ]);
+
+    // Get monthly revenue data
+    const monthlyRevenue = await Order.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: new Date(new Date().getFullYear(), 0, 1) }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$createdAt' },
+            month: { $month: '$createdAt' }
+          },
+          revenue: { $sum: '$total' },
+          orders: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { '_id.year': 1, '_id.month': 1 }
+      },
+      {
+        $limit: 12
+      }
+    ]);
+
+    // Format monthly revenue data
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    const formattedMonthlyRevenue = monthlyRevenue.map(item => ({
+      month: `${monthNames[item._id.month - 1]} ${item._id.year}`,
+      revenue: item.revenue,
+      orders: item.orders
+    }));
+
+    // Calculate order status distribution percentages
+    const orderStatusDistribution = orderStatusCounts.map(status => ({
+      status: status._id,
+      count: status.count,
+      percentage: totalOrders > 0 ? Math.round((status.count / totalOrders) * 100) : 0
+    }));
+
+    // Calculate daily, weekly, monthly revenue
+    const now = new Date();
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const dailyRevenue = await Order.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: oneDayAgo }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          revenue: { $sum: '$total' }
+        }
+      }
+    ]);
+
+    const weeklyRevenue = await Order.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: oneWeekAgo }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          revenue: { $sum: '$total' }
+        }
+      }
+    ]);
+
+    const monthlyRevenueCurrent = await Order.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: oneMonthAgo }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          revenue: { $sum: '$total' }
+        }
+      }
+    ]);
+
+    const analyticsData = {
+      revenue: {
+        total: currentRevenue,
+        monthly: monthlyRevenueCurrent[0]?.revenue || 0,
+        weekly: weeklyRevenue[0]?.revenue || 0,
+        daily: dailyRevenue[0]?.revenue || 0,
+        growth: revenueGrowth
+      },
+      orders: {
+        total: totalOrders,
+        pending: pendingOrders,
+        delivered: deliveredOrders,
+        cancelled: cancelledOrders,
+        growth: orderGrowth
+      },
+      customers: {
+        total: totalCustomers,
+        new: newCustomers,
+        active: activeCustomers.length,
+        growth: customerGrowth
+      },
+      products: {
+        total: totalProducts,
+        lowStock: lowStockProducts,
+        outOfStock: outOfStockProducts
+      },
+      topProducts,
+      topCustomers,
+      monthlyRevenue: formattedMonthlyRevenue,
+      orderStatusDistribution
+    };
+
+    res.status(200).json({
+      success: true,
+      data: analyticsData
+    });
+  } catch (error) {
+    console.error('Analytics error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching analytics data'
     });
   }
 });
