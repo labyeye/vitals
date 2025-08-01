@@ -6,7 +6,18 @@ const Order = require('../models/Order');
 const User = require('../models/User');
 const Loyalty = require('../models/Loyalty'); // Added Loyalty model
 const {getLoyaltyPoints, checkTierUpgrade} = require('../controller/loyaltyController');
+const getLoyaltyDetails = async (userId) => {
+  const loyalty = await Loyalty.findOne({ user: userId });
+  if (!loyalty) return null;
 
+  return {
+    points: loyalty.points,
+    tier: loyalty.tier,
+    nextTierPoints: loyalty.nextTierPoints,
+    progressToNextTier: loyalty.tier === 'gold' ? 100 : 
+      Math.min(100, Math.floor((loyalty.points / loyalty.nextTierPoints) * 100))
+  };
+};
 const router = express.Router();
 
 // Apply customer protection to all routes
@@ -35,35 +46,37 @@ router.get('/loyalty', async (req, res) => {
     });
   }
 });
-
-// Update the dashboard route to include loyalty info
 router.get('/dashboard', async (req, res) => {
   try {
-    // Get customer's recent orders
-    const recentOrders = await Order.find({ customer: req.user._id })
-      .populate('items.product', 'name price images')
-      .sort({ createdAt: -1 })
-      .limit(5);
-
     // Get order statistics
     const orderStats = await Order.aggregate([
       { $match: { customer: req.user._id } },
       {
         $group: {
-          _id: '$status',
-          count: { $sum: 1 }
+          _id: null,
+          total: { $sum: 1 },
+          pending: {
+            $sum: {
+              $cond: [{ $eq: ['$status', 'pending'] }, 1, 0]
+            }
+          },
+          delivered: {
+            $sum: {
+              $cond: [{ $eq: ['$status', 'delivered'] }, 1, 0]
+            }
+          },
+          cancelled: {
+            $sum: {
+              $cond: [{ $eq: ['$status', 'cancelled'] }, 1, 0]
+            }
+          }
         }
       }
     ]);
 
     // Get total spent
     const totalSpent = await Order.aggregate([
-      { 
-        $match: { 
-          customer: req.user._id,
-          'payment.status': 'paid'
-        } 
-      },
+      { $match: { customer: req.user._id, status: 'delivered' } },
       {
         $group: {
           _id: null,
@@ -78,21 +91,19 @@ router.get('/dashboard', async (req, res) => {
     res.status(200).json({
       success: true,
       data: {
-        recentOrders,
-        orderStats,
+        orderStats: orderStats[0] || { total: 0, pending: 0, delivered: 0, cancelled: 0 },
         totalSpent: totalSpent[0]?.total || 0,
         loyalty: loyaltyDetails
       }
     });
   } catch (error) {
-    console.error('Customer dashboard error:', error);
+    console.error('Dashboard error:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching dashboard data'
     });
   }
 });
-
 // @desc    Get customer profile
 // @route   GET /api/customer/profile
 // @access  Customer only
@@ -324,6 +335,180 @@ router.put('/orders/:id/cancel', [
     res.status(500).json({
       success: false,
       message: 'Error cancelling order'
+    });
+  }
+});
+
+// @desc    Update order status (for delivery confirmation)
+// @route   PUT /api/customer/orders/:id/status
+// @access  Customer only
+router.put('/orders/:id/status', [
+  body('status')
+    .isIn(['delivered'])
+    .withMessage('Status can only be updated to delivered'),
+  body('deliveryConfirmation')
+    .isBoolean()
+    .withMessage('Delivery confirmation is required')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { status, deliveryConfirmation } = req.body;
+
+    const order = await Order.findOne({
+      _id: req.params.id,
+      customer: req.user._id
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    // Only allow status update to delivered
+    if (status === 'delivered' && deliveryConfirmation) {
+      // Update order status
+      order.status = 'delivered';
+      order.deliveredAt = new Date();
+      
+      // Add timeline entry
+      order.timeline.push({
+        status: 'delivered',
+        message: 'Order delivered and confirmed by customer',
+        updatedBy: req.user._id
+      });
+
+      await order.save();
+
+      // Add bonus loyalty points for delivery confirmation
+      const loyalty = await Loyalty.findOne({ user: req.user._id });
+      if (loyalty && order.payment.status === 'paid') {
+        const bonusPoints = Math.floor(order.total / 50); // 2 points per ₹100 for delivery bonus
+        loyalty.points += bonusPoints;
+        loyalty.lifetimePoints += bonusPoints;
+        
+        loyalty.history.push({
+          type: 'earned',
+          points: bonusPoints,
+          order: order._id,
+          description: `Earned ${bonusPoints} bonus points for delivery confirmation of order #${order.orderNumber}`
+        });
+
+        // Check for tier upgrade
+        const { newTier, nextTierPoints } = loyalty.checkTierUpgrade();
+        if (newTier !== loyalty.tier) {
+          loyalty.history.push({
+            type: 'tier_upgrade',
+            points: 0,
+            description: `Upgraded from ${loyalty.tier} to ${newTier} tier`
+          });
+          loyalty.tier = newTier;
+          loyalty.nextTierPoints = nextTierPoints;
+        }
+
+        await loyalty.save();
+
+        // Update user document
+        await User.findByIdAndUpdate(req.user._id, {
+          loyaltyPoints: loyalty.points,
+          loyaltyTier: loyalty.tier,
+          $push: {
+            loyaltyHistory: {
+              date: new Date(),
+              action: 'delivery_bonus',
+              points: bonusPoints,
+              order: order._id
+            }
+          }
+        });
+
+        return res.status(200).json({
+          success: true,
+          message: 'Order status updated successfully',
+          data: {
+            order,
+            bonusPointsEarned: bonusPoints,
+            newLoyaltyPoints: loyalty.points,
+            newTier: loyalty.tier
+          }
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Order status updated successfully',
+        data: order
+      });
+    }
+
+    res.status(400).json({
+      success: false,
+      message: 'Invalid status update'
+    });
+  } catch (error) {
+    console.error('Update order status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating order status'
+    });
+  }
+});
+
+// @desc    Get customer order details with loyalty info
+// @route   GET /api/customer/orders/:id/details
+// @access  Customer only
+router.get('/orders/:id/details', async (req, res) => {
+  try {
+    const order = await Order.findOne({
+      _id: req.params.id,
+      customer: req.user._id
+    }).populate('items.product', 'name price images description');
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    // Get loyalty information
+    const loyalty = await Loyalty.findOne({ user: req.user._id });
+    const loyaltyInfo = loyalty ? {
+      currentPoints: loyalty.points,
+      currentTier: loyalty.tier,
+      nextTierPoints: loyalty.nextTierPoints,
+      progressToNextTier: loyalty.tier === 'gold' ? 100 : 
+        Math.min(100, Math.floor((loyalty.points / loyalty.nextTierPoints) * 100))
+    } : null;
+
+    // Calculate points earned from this order
+    const pointsEarned = Math.floor(order.total / 100);
+    const deliveryBonusPoints = order.status === 'delivered' ? Math.floor(order.total / 50) : 0;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        order,
+        loyaltyInfo,
+        pointsEarned,
+        deliveryBonusPoints,
+        totalPointsFromOrder: pointsEarned + deliveryBonusPoints
+      }
+    });
+  } catch (error) {
+    console.error('Get order details error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching order details'
     });
   }
 });

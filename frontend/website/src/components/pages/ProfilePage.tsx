@@ -1,19 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { 
-  User, 
-  Package, 
-  Heart, 
-  Settings, 
-  LogOut, 
-  Crown, 
-  Star, 
+import {
+  User,
+  Package,
+  Heart,
+  Settings,
+  LogOut,
+  Crown,
+  Star,
   Award,
   MapPin,
   Phone,
   Mail,
-  Calendar,
   CreditCard,
   Shield,
   Gift,
@@ -46,6 +45,9 @@ const ProfilePage: React.FC = () => {
     }
   });
   const [saving, setSaving] = useState(false);
+  const [loyaltyInfo, setLoyaltyInfo] = useState<any>(null);
+  const [orderStats, setOrderStats] = useState<any>(null);
+  const [totalSpent, setTotalSpent] = useState(0);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -78,7 +80,7 @@ const ProfilePage: React.FC = () => {
 
   const handleSaveProfile = async () => {
     if (!token) return;
-    
+
     setSaving(true);
     try {
       const response = await fetch('http://localhost:3500/api/auth/profile', {
@@ -110,41 +112,27 @@ const ProfilePage: React.FC = () => {
   if (!user) {
     return null;
   }
-
-  // Use actual user data with fallbacks
   const userData = {
     name: `${user.firstName} ${user.lastName}`,
     email: user.email,
     phone: user.phone || "Not provided",
-    address: user.address ? 
+    address: user.address ?
       `${user.address.street || ''}, ${user.address.city || ''}, ${user.address.state || ''} ${user.address.zipCode || ''}`.replace(/^,\s*/, '').replace(/,\s*,/g, ',') || "Not provided" : "Not provided",
-    joinDate: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+    joinDate: new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
     avatar: user.avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80",
-    totalOrders: 0, // Will be fetched from API later
-    totalSpent: 0, // Will be fetched from API later
-    loyaltyPoints: user.loyalty?.points || 0,
-    currentTier: user.loyalty?.tier || 'Bronze',
-    nextTier: 'Silver', // You can compute this if needed
-    progressToNextTier: 0,
-    pointsToNextTier: 1000
+    totalOrders: orderStats?.total || 0,
+    totalSpent: totalSpent || 0,
+    loyaltyPoints: loyaltyInfo?.points || 0,
+    currentTier: loyaltyInfo?.tier || 'bronze',
+    nextTier: loyaltyInfo?.nextTier || 'silver',
+    progressToNextTier: loyaltyInfo?.progressToNextTier || 0,
+    pointsToNextTier: loyaltyInfo ? (loyaltyInfo.nextTierPoints - loyaltyInfo.points) : 5000
   };
-  const loyaltyData = user.loyalty || {
-    points: 0,
-    tier: 'bronze',
-    nextTierPoints: 5000,
-    progressToNextTier: 0,
-    history: []
-  };
-  
-
-  // Milestone tiers
   const tiers = [
     { name: "Bronze", minPoints: 0, maxPoints: 4999, color: "#CD7F32", icon: Star },
     { name: "Silver", minPoints: 5000, maxPoints: 9999, color: "#C0C0C0", icon: Award },
     { name: "Gold", minPoints: 10000, maxPoints: 999999, color: "#FFD700", icon: Crown }
   ];
-
-  // Fetch customer orders when Orders tab is active
   useEffect(() => {
     if (activeTab === 'orders' && user && token) {
       const fetchOrders = async () => {
@@ -171,6 +159,46 @@ const ProfilePage: React.FC = () => {
     }
   }, [activeTab, user, token]);
 
+  // Fetch loyalty information and order statistics
+  useEffect(() => {
+    if (user && token) {
+      const fetchLoyaltyAndStats = async () => {
+        try {
+          // Fetch loyalty information
+          const loyaltyResponse = await fetch('http://localhost:3500/api/customer/loyalty', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (loyaltyResponse.ok) {
+            const loyaltyData = await loyaltyResponse.json();
+            setLoyaltyInfo(loyaltyData.data);
+          }
+
+          // Fetch order statistics
+          const statsResponse = await fetch('http://localhost:3500/api/customer/dashboard', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (statsResponse.ok) {
+            const statsData = await statsResponse.json();
+            setOrderStats(statsData.data.orderStats);
+            setTotalSpent(statsData.data.totalSpent || 0);
+          }
+        } catch (error) {
+          console.error('Error fetching loyalty and stats:', error);
+        }
+      };
+
+      fetchLoyaltyAndStats();
+    }
+  }, [user, token]);
+
   const getCurrentTier = () => tiers.find(tier => tier.name === userData.currentTier);
   const getNextTier = () => tiers.find(tier => tier.name === userData.nextTier);
 
@@ -186,7 +214,7 @@ const ProfilePage: React.FC = () => {
                 alt={userData.name}
                 className="w-24 h-24 rounded-full object-cover border-4 border-[#688F4E]"
               />
-              <button 
+              <button
                 onClick={handleEditProfile}
                 className="absolute -bottom-2 -right-2 bg-[#688F4E] text-white p-2 rounded-full hover:bg-[#5a7a42] transition-colors"
               >
@@ -204,7 +232,7 @@ const ProfilePage: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-2 text-[#688F4E]">
                   <TrendingUp className="w-5 h-5" />
-                  <span className="font-medium">₹{userData.totalSpent.toLocaleString()}</span>
+                  <span className="font-medium">₹{userData.totalSpent.toLocaleString('en-IN')}</span>
                 </div>
               </div>
             </div>
@@ -217,7 +245,7 @@ const ProfilePage: React.FC = () => {
             <Crown className="w-8 h-8 text-[#FFD700]" />
             <h2 className="text-2xl font-bold text-[#2B463C]">Loyalty Program</h2>
           </div>
-          
+
           {/* Current Tier */}
           <div className="bg-gradient-to-r from-[#FFD700] to-[#FFA500] rounded-xl p-6 mb-6">
             <div className="flex items-center justify-between">
@@ -228,7 +256,6 @@ const ProfilePage: React.FC = () => {
               <Crown className="w-12 h-12 text-white" />
             </div>
           </div>
-
           {/* Progress to Next Tier */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
@@ -236,13 +263,13 @@ const ProfilePage: React.FC = () => {
               <span className="text-[#688F4E] font-bold">{userData.progressToNextTier}%</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3">
-              <div 
+              <div
                 className="bg-gradient-to-r from-[#688F4E] to-[#B1D182] h-3 rounded-full transition-all duration-500"
-                style={{ width: `${userData.progressToNextTier}%` }}
+                style={{ width: `${Math.min(100, Math.max(0, userData.progressToNextTier))}%` }}
               ></div>
             </div>
             <p className="text-sm text-gray-600 mt-2">
-              {userData.pointsToNextTier} more points needed for {userData.nextTier}
+              {userData.pointsToNextTier > 0 ? `${userData.pointsToNextTier} more points needed for ${userData.nextTier}` : 'You have reached the highest tier!'}
             </p>
           </div>
 
@@ -252,21 +279,19 @@ const ProfilePage: React.FC = () => {
               const Icon = tier.icon;
               const isCurrentTier = tier.name === userData.currentTier;
               const isUnlocked = userData.loyaltyPoints >= tier.minPoints;
-              
+
               return (
-                <div 
+                <div
                   key={tier.name}
-                  className={`p-4 rounded-lg border-2 text-center transition-all ${
-                    isCurrentTier 
-                      ? 'border-[#FFD700] bg-[#FFD700]/10' 
-                      : isUnlocked 
-                        ? 'border-gray-300 bg-gray-50' 
-                        : 'border-gray-200 bg-gray-100 opacity-50'
-                  }`}
+                  className={`p-4 rounded-lg border-2 text-center transition-all ${isCurrentTier
+                    ? 'border-[#FFD700] bg-[#FFD700]/10'
+                    : isUnlocked
+                      ? 'border-gray-300 bg-gray-50'
+                      : 'border-gray-200 bg-gray-100 opacity-50'
+                    }`}
                 >
-                  <Icon className={`w-8 h-8 mx-auto mb-2 ${
-                    isCurrentTier ? 'text-[#FFD700]' : 'text-gray-400'
-                  }`} />
+                  <Icon className={`w-8 h-8 mx-auto mb-2 ${isCurrentTier ? 'text-[#FFD700]' : 'text-gray-400'
+                    }`} />
                   <h4 className="font-semibold text-sm">{tier.name}</h4>
                   <p className="text-xs text-gray-600">{tier.minPoints}+ pts</p>
                 </div>
@@ -289,11 +314,10 @@ const ProfilePage: React.FC = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors ${
-                    activeTab === tab.id
-                      ? 'text-[#688F4E] border-b-2 border-[#688F4E]'
-                      : 'text-gray-600 hover:text-[#688F4E]'
-                  }`}
+                  className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors ${activeTab === tab.id
+                    ? 'text-[#688F4E] border-b-2 border-[#688F4E]'
+                    : 'text-gray-600 hover:text-[#688F4E]'
+                    }`}
                 >
                   <Icon className="w-5 h-5" />
                   {tab.label}
@@ -376,38 +400,59 @@ const ProfilePage: React.FC = () => {
                 ) : orders.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">No orders found.</div>
                 ) : (
-                <div className="space-y-4">
+                  <div className="space-y-4">
                     {orders.map((order) => (
                       <div key={order._id} className="border border-gray-200 rounded-lg p-4 bg-white shadow-sm">
-                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center justify-between mb-2">
                           <h4 className="font-semibold text-[#2B463C]">{order.orderNumber}</h4>
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                            order.status === 'delivered' 
-                            ? 'bg-green-100 text-green-800' 
-                              : order.status === 'pending'
-                                ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {order.status}
-                        </span>
-                      </div>
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${order.status === 'delivered'
+                            ? 'bg-green-100 text-green-800'
+                            : order.status === 'pending'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-blue-100 text-blue-800'
+                            }`}>
+                            {order.status}
+                          </span>
+                        </div>
+
                         <p className="text-gray-600 text-sm mb-2">{new Date(order.createdAt).toLocaleDateString()}</p>
-                      <p className="text-gray-600 text-sm mb-2">
+                        <p className="text-gray-600 text-sm mb-2">
                           {order.items.map((item: any) => item.product?.name).join(", ")}
-                      </p>
-                      <p className="font-semibold text-[#2B463C]">₹{order.total}</p>
-                        {/* Pay Now button for pending, non-COD orders */}
-                        {order.status === 'pending' && order.payment?.method !== 'cash_on_delivery' && (
+                        </p>
+                        <p className="font-semibold text-[#2B463C]">₹{order.total}</p>
+
+                        {/* Loyalty Points Info */}
+                        <div className="mt-2 p-3 bg-[#688F4E]/10 rounded-lg">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-[#2B463C] font-medium">Loyalty Points Earned:</span>
+                            <span className="text-[#688F4E] font-bold">
+                              {Math.floor(order.total / 100)} points
+                            </span>
+                          </div>
+                          
+                        </div>
+
+                        <div className="flex items-center justify-between mt-3">
                           <button
-                            className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                            onClick={() => alert('Redirect to payment gateway for order ' + order.orderNumber)}
+                            onClick={() => navigate(`/order/${order._id}`)}
+                            className="px-4 py-2 bg-[#688F4E] text-white rounded hover:bg-[#2B463C] transition-colors text-sm"
                           >
-                            Pay Now
+                            View Details
                           </button>
-                        )}
-                    </div>
-                  ))}
-                </div>
+
+                          {/* Pay Now button for pending, non-COD orders */}
+                          {order.status === 'pending' && order.payment?.method !== 'cash_on_delivery' && (
+                            <button
+                              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+                              onClick={() => alert('Redirect to payment gateway for order ' + order.orderNumber)}
+                            >
+                              Pay Now
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             )}
@@ -430,7 +475,7 @@ const ProfilePage: React.FC = () => {
                 <div>
                   <h3 className="text-xl font-bold text-[#2B463C] mb-4">Account Settings</h3>
                   <div className="space-y-4">
-                    <button 
+                    <button
                       onClick={handleEditProfile}
                       className="flex items-center gap-3 w-full p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                     >
@@ -451,9 +496,9 @@ const ProfilePage: React.FC = () => {
                     </button>
                   </div>
                 </div>
-                
+
                 <div className="border-t pt-6">
-                  <button 
+                  <button
                     onClick={logout}
                     className="flex items-center gap-3 w-full p-4 bg-red-50 rounded-lg hover:bg-red-100 transition-colors text-red-600"
                   >
@@ -482,7 +527,7 @@ const ProfilePage: React.FC = () => {
                 </button>
               </div>
             </div>
-            
+
             <div className="p-6 space-y-6">
               {/* Personal Information */}
               <div>
@@ -493,7 +538,7 @@ const ProfilePage: React.FC = () => {
                     <input
                       type="text"
                       value={editForm.firstName}
-                      onChange={(e) => setEditForm({...editForm, firstName: e.target.value})}
+                      onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
                       className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
                     />
                   </div>
@@ -502,7 +547,7 @@ const ProfilePage: React.FC = () => {
                     <input
                       type="text"
                       value={editForm.lastName}
-                      onChange={(e) => setEditForm({...editForm, lastName: e.target.value})}
+                      onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
                       className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
                     />
                   </div>
@@ -511,7 +556,7 @@ const ProfilePage: React.FC = () => {
                     <input
                       type="tel"
                       value={editForm.phone}
-                      onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
+                      onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
                       className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
                     />
                   </div>
@@ -528,8 +573,8 @@ const ProfilePage: React.FC = () => {
                       type="text"
                       value={editForm.address.street}
                       onChange={(e) => setEditForm({
-                        ...editForm, 
-                        address: {...editForm.address, street: e.target.value}
+                        ...editForm,
+                        address: { ...editForm.address, street: e.target.value }
                       })}
                       className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
                     />
@@ -540,8 +585,8 @@ const ProfilePage: React.FC = () => {
                       type="text"
                       value={editForm.address.city}
                       onChange={(e) => setEditForm({
-                        ...editForm, 
-                        address: {...editForm.address, city: e.target.value}
+                        ...editForm,
+                        address: { ...editForm.address, city: e.target.value }
                       })}
                       className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
                     />
@@ -552,8 +597,8 @@ const ProfilePage: React.FC = () => {
                       type="text"
                       value={editForm.address.state}
                       onChange={(e) => setEditForm({
-                        ...editForm, 
-                        address: {...editForm.address, state: e.target.value}
+                        ...editForm,
+                        address: { ...editForm.address, state: e.target.value }
                       })}
                       className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
                     />
@@ -564,8 +609,8 @@ const ProfilePage: React.FC = () => {
                       type="text"
                       value={editForm.address.zipCode}
                       onChange={(e) => setEditForm({
-                        ...editForm, 
-                        address: {...editForm.address, zipCode: e.target.value}
+                        ...editForm,
+                        address: { ...editForm.address, zipCode: e.target.value }
                       })}
                       className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
                     />
@@ -576,8 +621,8 @@ const ProfilePage: React.FC = () => {
                       type="text"
                       value={editForm.address.country}
                       onChange={(e) => setEditForm({
-                        ...editForm, 
-                        address: {...editForm.address, country: e.target.value}
+                        ...editForm,
+                        address: { ...editForm.address, country: e.target.value }
                       })}
                       className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
                     />

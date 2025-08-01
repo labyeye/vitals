@@ -12,7 +12,6 @@ import {
   LogOut,
   User
 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
 
 interface SidebarProps {
   activeSection: string;
@@ -20,7 +19,6 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => {
-  const { user, logout } = useAuth();
   const menuItems = [
     { id: 'overview', icon: Home, label: 'Overview' },
     { id: 'analytics', icon: BarChart3, label: 'Analytics' },

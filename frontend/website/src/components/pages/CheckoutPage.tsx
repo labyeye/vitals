@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useCartContext } from '../../context/CartContext';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Check, Lock, Shield, Truck, CreditCard, MapPin, User, Mail, Phone, Download } from 'lucide-react';
+import { Check, Lock, Shield, Truck, CreditCard, MapPin, User, Mail, Phone, Download, Gift } from 'lucide-react';
 
 const CheckoutPage: React.FC = () => {
   const { cartItems, clearCart, isLoading } = useCartContext();
@@ -23,6 +23,7 @@ const CheckoutPage: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
+  const [orderData, setOrderData] = useState<any>(null);
   const navigate = useNavigate();
 
   // Fetch user profile when component mounts
@@ -173,8 +174,9 @@ const CheckoutPage: React.FC = () => {
       
       if (!res.ok) throw new Error(data.message || 'Order failed');
       setSuccess(true);
+      setOrderData(data); // Store order data
       clearCart();
-      setTimeout(() => navigate('/'), 3000);
+      setTimeout(() => navigate(`/order/${data.data.order._id}`), 3000); // Redirect to order details
     } catch (err: any) {
       console.error('Order error:', err);
       setError(err.message);
@@ -203,13 +205,37 @@ const CheckoutPage: React.FC = () => {
             <Check className="w-8 h-8 text-green-600" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Order Placed Successfully!</h2>
-          <p className="text-gray-600 mb-6">Thank you for your purchase. You will receive an email confirmation shortly.</p>
-          <button
-            onClick={() => navigate('/')}
-            className="bg-[#688F4E] text-white px-6 py-3 rounded-lg hover:bg-[#2B463C] transition-colors"
-          >
-            Continue Shopping
-          </button>
+          <p className="text-gray-600 mb-4">Thank you for your purchase. You will receive an email confirmation shortly.</p>
+          
+          {orderData && (
+            <div className="mb-6 p-4 bg-[#688F4E]/10 rounded-lg">
+              <div className="flex items-center justify-center space-x-2 mb-2">
+                <Gift className="w-5 h-5 text-[#688F4E]" />
+                <span className="font-medium text-[#2B463C]">Loyalty Points Earned!</span>
+              </div>
+              <p className="text-sm text-[#688F4E] font-bold">
+                +{orderData.data.loyaltyPointsEarned} points
+              </p>
+              <p className="text-xs text-gray-600 mt-1">
+                Current Tier: {orderData.data.newTier.charAt(0).toUpperCase() + orderData.data.newTier.slice(1)}
+              </p>
+            </div>
+          )}
+          
+          <div className="space-y-3">
+            <button
+              onClick={() => navigate(`/order/${orderData?.data?.order?._id}`)}
+              className="w-full bg-[#688F4E] text-white px-6 py-3 rounded-lg hover:bg-[#2B463C] transition-colors"
+            >
+              View Order Details
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              className="w-full bg-gray-100 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              Continue Shopping
+            </button>
+          </div>
         </div>
       </div>
     );

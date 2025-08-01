@@ -7,6 +7,8 @@ interface User {
   email: string;
   role: 'admin' | 'customer';
   phone?: string;
+  createdAt: string | Date;
+
   address?: {
     street?: string;
     city?: string;
