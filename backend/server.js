@@ -32,6 +32,7 @@ app.use(cors({
       'http://localhost:3000', // React default (if used)
       'http://127.0.0.1:5173',
       'http://127.0.0.1:5174',
+      'https://vitals-theta.vercel.app'
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

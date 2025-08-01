@@ -87,7 +87,7 @@ const ProfilePage: React.FC = () => {
     setSaving(true);
     try {
       // Change this endpoint to match the backend route
-      const response = await fetch('http://localhost:3500/api/customer/profile', {
+      const response = await fetch('https://vitals-iu4r.onrender.com/api/customer/profile', {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -157,7 +157,7 @@ const ProfilePage: React.FC = () => {
         setOrdersLoading(true);
         setOrdersError('');
         try {
-          const response = await fetch('http://localhost:3500/api/customer/orders', {
+          const response = await fetch('https://vitals-iu4r.onrender.com/api/customer/orders', {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json',
@@ -180,7 +180,7 @@ const ProfilePage: React.FC = () => {
     if (user && token) {
       const fetchDashboardData = async () => {
         try {
-          const response = await fetch('http://localhost:3500/api/customer/dashboard', {
+          const response = await fetch('https://vitals-iu4r.onrender.com/api/customer/dashboard', {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           
