@@ -14,20 +14,28 @@ export interface Product {
   bgGradient: string;
 }
 
+interface CartItem {
+  id: string;
+  name: string;
+  packSize: number;
+  quantity: number;
+  price: number;
+  image: string;
+}
+
 interface ProductCardProps {
   product: Product;
   onAddToCart: (productId: string, quantity: number, packSize: number) => void;
-  viewDetailsLink?: string; // Optional prop for view details link
+  viewDetailsLink?: string;
 }
-
-const ProductCard: React.FC<ProductCardProps> = ({ 
-  product, 
-  onAddToCart, 
-  viewDetailsLink 
+const ProductCard: React.FC<ProductCardProps> = ({
+  product,
+  onAddToCart,
+  viewDetailsLink
 }) => {
   const navigate = useNavigate();
   const availablePackSizes = Object.keys(product.prices).map(Number).sort((a, b) => a - b);
-  
+
   // Initialize selectedPack with the first available pack size or fallback to 1
   const getInitialPackSize = (): number => {
     if (product.prices[1]) return 1;
@@ -54,7 +62,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   }));
 
   const currentPrice = product.prices[selectedPack] || 0;
-const pricePerBottle = selectedPack > 0 ? currentPrice / selectedPack : 0;
+  const pricePerBottle = selectedPack > 0 ? currentPrice / selectedPack : 0;
 
   const handleViewDetails = () => {
     if (viewDetailsLink) {
@@ -63,12 +71,17 @@ const pricePerBottle = selectedPack > 0 ? currentPrice / selectedPack : 0;
       navigate(`/product/${product.id}`);
     }
   };
+  const handleAddToCart = () => {
+    if (onAddToCart) {
+      // Call the parent's function with the expected parameters
+      onAddToCart(product.id, quantity, selectedPack);
+    }
+  };
 
   return (
     <div
-      className={`group relative bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-lg border border-white/20 hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 ${
-        isHovered ? 'scale-105' : 'scale-100'
-      }`}
+      className={`group relative bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-lg border border-white/20 hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 ${isHovered ? 'scale-105' : 'scale-100'
+        }`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -92,7 +105,7 @@ const pricePerBottle = selectedPack > 0 ? currentPrice / selectedPack : 0;
           className="w-full h-48 object-cover rounded-xl shadow-lg transform group-hover:scale-110 transition-transform duration-500"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-2xl"></div>
-        
+
         {/* Floating Info Button */}
         <button className="absolute bottom-4 right-4 p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110">
           <Info className="w-4 h-4 text-[#2B463C]" />
@@ -126,11 +139,10 @@ const pricePerBottle = selectedPack > 0 ? currentPrice / selectedPack : 0;
               <button
                 key={option.size}
                 onClick={() => setSelectedPack(option.size)}
-                className={`relative p-3 rounded-xl border-2 text-sm font-medium transition-all duration-300 ${
-                  selectedPack === option.size
-                    ? 'border-[#688F4E] bg-[#688F4E]/10 text-[#2B463C]'
-                    : 'border-gray-200 hover:border-[#B1D182] text-gray-600 hover:text-[#2B463C]'
-                }`}
+                className={`relative p-3 rounded-xl border-2 text-sm font-medium transition-all duration-300 ${selectedPack === option.size
+                  ? 'border-[#688F4E] bg-[#688F4E]/10 text-[#2B463C]'
+                  : 'border-gray-200 hover:border-[#B1D182] text-gray-600 hover:text-[#2B463C]'
+                  }`}
               >
                 {option.label}
                 {option.popular && (
@@ -187,6 +199,12 @@ const pricePerBottle = selectedPack > 0 ? currentPrice / selectedPack : 0;
             <span>Shelf Stable</span>
           </div>
         </div>
+        <div className="mt-2 text-sm text-[#688F4E]">
+  <div className="flex items-center">
+    <Star className="w-4 h-4 mr-1" />
+    <span>Earn {Math.floor(currentPrice * 0.10)} Evolv points</span>
+  </div>
+</div>
 
         {/* View Details Button */}
         <button
@@ -199,7 +217,7 @@ const pricePerBottle = selectedPack > 0 ? currentPrice / selectedPack : 0;
 
         {/* Add to Cart Button */}
         <button
-          onClick={() => onAddToCart(product.id, quantity, selectedPack)}
+          onClick={handleAddToCart}
           className="w-full bg-gradient-to-r from-[#2B463C] to-[#688F4E] text-white py-3 px-6 rounded-2xl font-semibold flex items-center justify-center space-x-2 hover:shadow-xl hover:scale-105 transition-all duration-300 group"
         >
           <ShoppingBag className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />

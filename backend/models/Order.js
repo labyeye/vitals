@@ -11,32 +11,38 @@ const orderSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
-  items: [{
-    product: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Product',
-      required: true
-    },
-    quantity: {
-      type: Number,
-      required: true,
-      min: [1, 'Quantity must be at least 1']
-    },
-    price: {
-      type: Number,
-      required: true,
-      min: [0, 'Price cannot be negative']
-    },
-    total: {
-      type: Number,
-      required: true,
-      min: [0, 'Total cannot be negative']
-    },
-    variant: {
-      name: String,
-      value: String
-    }
-  }],
+  // In Order.js, update the items schema:
+items: [{
+  product: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Product',
+    required: true
+  },
+  quantity: {
+    type: Number,
+    required: true,
+    min: [1, 'Quantity must be at least 1']
+  },
+  price: {
+    type: Number,
+    required: true,
+    min: [0, 'Price cannot be negative']
+  },
+  packSize: {
+    type: Number,
+    required: true,
+    default: 1
+  },
+  total: {
+    type: Number,
+    required: true,
+    min: [0, 'Total cannot be negative']
+  },
+  variant: {
+    name: String,
+    value: String
+  }
+}],
   subtotal: {
     type: Number,
     required: true,
@@ -213,6 +219,7 @@ const orderSchema = new mongoose.Schema({
       ref: 'User'
     }
   }],
+  
   estimatedDelivery: Date,
   deliveredAt: Date,
   cancelledAt: Date,
@@ -220,6 +227,7 @@ const orderSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   },
+
   cancellationReason: String
 }, {
   timestamps: true
@@ -295,5 +303,6 @@ orderSchema.statics.findByCustomer = function(customerId) {
 orderSchema.statics.findByStatus = function(status) {
   return this.find({ status }).populate('customer', 'firstName lastName email');
 };
+
 
 module.exports = mongoose.model('Order', orderSchema); 

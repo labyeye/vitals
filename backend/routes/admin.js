@@ -4,7 +4,6 @@ const { protect, isAdmin } = require('../middleware/auth');
 const User = require('../models/User');
 const Product = require('../models/Product');
 const Order = require('../models/Order');
-const loyaltyController = require('../controller/loyaltyController');
 
 const router = express.Router();
 

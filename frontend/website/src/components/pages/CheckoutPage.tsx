@@ -7,6 +7,8 @@ import { Check, Lock, Shield, Truck, CreditCard, MapPin, User, Mail, Phone, Down
 const CheckoutPage: React.FC = () => {
   const { cartItems, clearCart, isLoading } = useCartContext();
   const { token, user } = useAuth();
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
+
   const [shipping, setShipping] = useState({
     firstName: '', lastName: '', email: '', phone: '',
     street: '', city: '', state: '', zipCode: '', country: 'India'
@@ -30,7 +32,7 @@ const CheckoutPage: React.FC = () => {
   useEffect(() => {
     const fetchUserProfile = async () => {
       if (!token) return;
-      
+
       try {
         setLoadingProfile(true);
         const response = await fetch('http://localhost:3500/api/auth/me', {
@@ -44,7 +46,7 @@ const CheckoutPage: React.FC = () => {
         if (response.ok) {
           const data = await response.json();
           setUserProfile(data.user);
-          
+
           // Auto-populate shipping address from user profile
           if (data.user) {
             const userData = data.user;
@@ -59,7 +61,7 @@ const CheckoutPage: React.FC = () => {
               zipCode: userData.address?.zipCode || '',
               country: userData.address?.country || 'India'
             };
-            
+
             setShipping(addressData);
             setBilling(addressData);
           }
@@ -89,7 +91,8 @@ const CheckoutPage: React.FC = () => {
     }
   }, [shipping, useSameAddress]);
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  // Ensure the calculation uses the correct price from cart items
+  const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const shippingCost = subtotal > 1000 ? 0 : 50;
   const tax = subtotal * 0.08;
   const total = subtotal + shippingCost + tax;
@@ -99,20 +102,18 @@ const CheckoutPage: React.FC = () => {
     if (type === 'shipping') setShipping((prev) => ({ ...prev, [name]: value }));
     else setBilling((prev) => ({ ...prev, [name]: value }));
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    
-    // Check if user is authenticated
+
     if (!token) {
       setError('You must be logged in to place an order. Please log in and try again.');
       setLoading(false);
       navigate('/login');
       return;
     }
-    
+
     // Frontend validation
     const requiredFields = [
       'firstName', 'lastName', 'email', 'phone', 'street', 'city', 'state', 'zipCode', 'country'
@@ -129,57 +130,53 @@ const CheckoutPage: React.FC = () => {
         return;
       }
     }
-    for (const item of cartItems) {
-      if (!item.id || typeof item.id !== 'string' || item.id.length < 12) {
-        setError('Invalid product in cart.');
-        setLoading(false);
-        return;
-      }
-      if (!item.quantity || item.quantity < 1) {
-        setError('Invalid quantity for a cart item.');
-        setLoading(false);
-        return;
-      }
-    }
-    
+
     const payload = {
-      items: cartItems.map(item => ({ product: item.id, quantity: item.quantity })),
+      items: cartItems.map(item => ({
+        product: item.id,
+        quantity: item.quantity,
+        price: item.price,
+        packSize: item.packSize,
+        itemTotal: item.price * item.quantity // Add item total for verification
+      })),
       shippingAddress: shipping,
       billingAddress: useSameAddress ? shipping : billing,
-      payment: { method: paymentMethod },
+      payment: {
+        method: paymentMethod,
+        amount: total
+      },
+      subtotal: subtotal,
+      shippingCost: shippingCost,
+      tax: tax,
+      total: total
     };
-    
-    // Debug logging
-    console.log('Token being sent:', token);
-    console.log('Token length:', token ? token.length : 0);
-    console.log('Order payload:', payload);
-    
-    const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    };
-    console.log('Request headers:', headers);
-    
+
+    console.log('Complete order payload:', JSON.stringify(payload, null, 2));
+
+    // In handleSubmit function of CheckoutPage.tsx
     try {
       const res = await fetch('http://localhost:3500/api/customer/orders', {
         method: 'POST',
-        headers,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify(payload),
         credentials: 'include',
       });
-      
-      console.log('Response status:', res.status);
+
       const data = await res.json();
-      console.log('Response data:', data);
-      
+      console.log('Order response:', data);
+
       if (!res.ok) throw new Error(data.message || 'Order failed');
+
       setSuccess(true);
-      setOrderData(data); // Store order data
+      setOrderData(data.data); // Changed from data to data.data
       clearCart();
-      setTimeout(() => navigate(`/order/${data.data.order._id}`), 3000); // Redirect to order details
+      navigate(`/profile`); // Redirect to profile instead of order page
     } catch (err: any) {
       console.error('Order error:', err);
-      setError(err.message);
+      setError(err.message || 'Failed to place order');
     } finally {
       setLoading(false);
     }
@@ -206,22 +203,23 @@ const CheckoutPage: React.FC = () => {
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Order Placed Successfully!</h2>
           <p className="text-gray-600 mb-4">Thank you for your purchase. You will receive an email confirmation shortly.</p>
-          
+
           {orderData && (
             <div className="mb-6 p-4 bg-[#688F4E]/10 rounded-lg">
               <div className="flex items-center justify-center space-x-2 mb-2">
                 <Gift className="w-5 h-5 text-[#688F4E]" />
-                <span className="font-medium text-[#2B463C]">Loyalty Points Earned!</span>
+                <span className="font-medium text-[#2B463C]">Evolv Points Earned!</span>
               </div>
               <p className="text-sm text-[#688F4E] font-bold">
-                +{orderData.data.loyaltyPointsEarned} points
+                +{Math.floor(orderData.order.total * (orderData.newTier === 'bronze' ? 0.10 :
+                  orderData.newTier === 'silver' ? 0.15 : 0.20))} points
               </p>
               <p className="text-xs text-gray-600 mt-1">
-                Current Tier: {orderData.data.newTier.charAt(0).toUpperCase() + orderData.data.newTier.slice(1)}
+                Current Tier: {orderData.newTier.charAt(0).toUpperCase() + orderData.newTier.slice(1)}
               </p>
             </div>
           )}
-          
+
           <div className="space-y-3">
             <button
               onClick={() => navigate(`/order/${orderData?.data?.order?._id}`)}
@@ -326,7 +324,7 @@ const CheckoutPage: React.FC = () => {
                       </button>
                     )}
                   </div>
-                  
+
                   {loadingProfile && (
                     <div className="mb-4 p-4 bg-blue-50 rounded-lg">
                       <div className="flex items-center space-x-2">
@@ -335,111 +333,111 @@ const CheckoutPage: React.FC = () => {
                       </div>
                     </div>
                   )}
-                  
+
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
-                      <input 
-                        required 
-                        name="firstName" 
-                        placeholder="Enter first name" 
-                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent" 
-                        value={shipping.firstName} 
-                        onChange={e => handleInput(e, 'shipping')} 
+                      <input
+                        required
+                        name="firstName"
+                        placeholder="Enter first name"
+                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
+                        value={shipping.firstName}
+                        onChange={e => handleInput(e, 'shipping')}
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
-                      <input 
-                        required 
-                        name="lastName" 
-                        placeholder="Enter last name" 
-                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent" 
-                        value={shipping.lastName} 
-                        onChange={e => handleInput(e, 'shipping')} 
+                      <input
+                        required
+                        name="lastName"
+                        placeholder="Enter last name"
+                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
+                        value={shipping.lastName}
+                        onChange={e => handleInput(e, 'shipping')}
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                      <input 
-                        required 
-                        name="email" 
+                      <input
+                        required
+                        name="email"
                         type="email"
-                        placeholder="Enter email address" 
-                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent" 
-                        value={shipping.email} 
-                        onChange={e => handleInput(e, 'shipping')} 
+                        placeholder="Enter email address"
+                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
+                        value={shipping.email}
+                        onChange={e => handleInput(e, 'shipping')}
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
-                      <input 
-                        required 
-                        name="phone" 
-                        placeholder="Enter phone number" 
-                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent" 
-                        value={shipping.phone} 
-                        onChange={e => handleInput(e, 'shipping')} 
+                      <input
+                        required
+                        name="phone"
+                        placeholder="Enter phone number"
+                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
+                        value={shipping.phone}
+                        onChange={e => handleInput(e, 'shipping')}
                       />
                     </div>
                     <div className="col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-2">Street Address</label>
-                      <input 
-                        required 
-                        name="street" 
-                        placeholder="Enter street address" 
-                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent" 
-                        value={shipping.street} 
-                        onChange={e => handleInput(e, 'shipping')} 
+                      <input
+                        required
+                        name="street"
+                        placeholder="Enter street address"
+                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
+                        value={shipping.street}
+                        onChange={e => handleInput(e, 'shipping')}
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
-                      <input 
-                        required 
-                        name="city" 
-                        placeholder="Enter city" 
-                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent" 
-                        value={shipping.city} 
-                        onChange={e => handleInput(e, 'shipping')} 
+                      <input
+                        required
+                        name="city"
+                        placeholder="Enter city"
+                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
+                        value={shipping.city}
+                        onChange={e => handleInput(e, 'shipping')}
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
-                      <input 
-                        required 
-                        name="state" 
-                        placeholder="Enter state" 
-                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent" 
-                        value={shipping.state} 
-                        onChange={e => handleInput(e, 'shipping')} 
+                      <input
+                        required
+                        name="state"
+                        placeholder="Enter state"
+                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
+                        value={shipping.state}
+                        onChange={e => handleInput(e, 'shipping')}
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">ZIP Code</label>
-                      <input 
-                        required 
-                        name="zipCode" 
-                        placeholder="Enter ZIP code" 
-                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent" 
-                        value={shipping.zipCode} 
-                        onChange={e => handleInput(e, 'shipping')} 
+                      <input
+                        required
+                        name="zipCode"
+                        placeholder="Enter ZIP code"
+                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
+                        value={shipping.zipCode}
+                        onChange={e => handleInput(e, 'shipping')}
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Country</label>
-                      <input 
-                        required 
-                        name="country" 
-                        placeholder="Enter country" 
-                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent" 
-                        value={shipping.country} 
-                        onChange={e => handleInput(e, 'shipping')} 
+                      <input
+                        required
+                        name="country"
+                        placeholder="Enter country"
+                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
+                        value={shipping.country}
+                        onChange={e => handleInput(e, 'shipping')}
                       />
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Billing Address */}
                 <div className="bg-white rounded-2xl shadow-sm p-6">
                   <div className="flex items-center justify-between mb-6">
@@ -457,122 +455,122 @@ const CheckoutPage: React.FC = () => {
                       <span className="ml-2 text-sm text-gray-600">Same as shipping address</span>
                     </label>
                   </div>
-                  
+
                   {!useSameAddress && (
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
-                        <input 
-                          required 
-                          name="firstName" 
-                          placeholder="Enter first name" 
-                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent" 
-                          value={billing.firstName} 
-                          onChange={e => handleInput(e, 'billing')} 
+                        <input
+                          required
+                          name="firstName"
+                          placeholder="Enter first name"
+                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
+                          value={billing.firstName}
+                          onChange={e => handleInput(e, 'billing')}
                         />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
-                        <input 
-                          required 
-                          name="lastName" 
-                          placeholder="Enter last name" 
-                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent" 
-                          value={billing.lastName} 
-                          onChange={e => handleInput(e, 'billing')} 
+                        <input
+                          required
+                          name="lastName"
+                          placeholder="Enter last name"
+                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
+                          value={billing.lastName}
+                          onChange={e => handleInput(e, 'billing')}
                         />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                        <input 
-                          required 
-                          name="email" 
+                        <input
+                          required
+                          name="email"
                           type="email"
-                          placeholder="Enter email address" 
-                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent" 
-                          value={billing.email} 
-                          onChange={e => handleInput(e, 'billing')} 
+                          placeholder="Enter email address"
+                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
+                          value={billing.email}
+                          onChange={e => handleInput(e, 'billing')}
                         />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
-                        <input 
-                          required 
-                          name="phone" 
-                          placeholder="Enter phone number" 
-                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent" 
-                          value={billing.phone} 
-                          onChange={e => handleInput(e, 'billing')} 
+                        <input
+                          required
+                          name="phone"
+                          placeholder="Enter phone number"
+                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
+                          value={billing.phone}
+                          onChange={e => handleInput(e, 'billing')}
                         />
                       </div>
                       <div className="col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-2">Street Address</label>
-                        <input 
-                          required 
-                          name="street" 
-                          placeholder="Enter street address" 
-                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent" 
-                          value={billing.street} 
-                          onChange={e => handleInput(e, 'billing')} 
+                        <input
+                          required
+                          name="street"
+                          placeholder="Enter street address"
+                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
+                          value={billing.street}
+                          onChange={e => handleInput(e, 'billing')}
                         />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
-                        <input 
-                          required 
-                          name="city" 
-                          placeholder="Enter city" 
-                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent" 
-                          value={billing.city} 
-                          onChange={e => handleInput(e, 'billing')} 
+                        <input
+                          required
+                          name="city"
+                          placeholder="Enter city"
+                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
+                          value={billing.city}
+                          onChange={e => handleInput(e, 'billing')}
                         />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
-                        <input 
-                          required 
-                          name="state" 
-                          placeholder="Enter state" 
-                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent" 
-                          value={billing.state} 
-                          onChange={e => handleInput(e, 'billing')} 
+                        <input
+                          required
+                          name="state"
+                          placeholder="Enter state"
+                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
+                          value={billing.state}
+                          onChange={e => handleInput(e, 'billing')}
                         />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">ZIP Code</label>
-                        <input 
-                          required 
-                          name="zipCode" 
-                          placeholder="Enter ZIP code" 
-                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent" 
-                          value={billing.zipCode} 
-                          onChange={e => handleInput(e, 'billing')} 
+                        <input
+                          required
+                          name="zipCode"
+                          placeholder="Enter ZIP code"
+                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
+                          value={billing.zipCode}
+                          onChange={e => handleInput(e, 'billing')}
                         />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Country</label>
-                        <input 
-                          required 
-                          name="country" 
-                          placeholder="Enter country" 
-                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent" 
-                          value={billing.country} 
-                          onChange={e => handleInput(e, 'billing')} 
+                        <input
+                          required
+                          name="country"
+                          placeholder="Enter country"
+                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
+                          value={billing.country}
+                          onChange={e => handleInput(e, 'billing')}
                         />
                       </div>
                     </div>
                   )}
                 </div>
-                
+
                 {/* Payment Method */}
                 <div className="bg-white rounded-2xl shadow-sm p-6">
                   <div className="flex items-center mb-6">
                     <CreditCard className="w-6 h-6 text-[#688F4E] mr-3" />
                     <h3 className="text-xl font-bold text-gray-900">Payment Method</h3>
                   </div>
-                  <select 
-                    value={paymentMethod} 
-                    onChange={e => setPaymentMethod(e.target.value)} 
+                  <select
+                    value={paymentMethod}
+                    onChange={e => setPaymentMethod(e.target.value)}
                     className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
                   >
                     <option value="cash_on_delivery">Cash on Delivery</option>
@@ -582,16 +580,16 @@ const CheckoutPage: React.FC = () => {
                     <option value="stripe">Stripe</option>
                   </select>
                 </div>
-                
+
                 {error && (
                   <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
                     {error}
                   </div>
                 )}
-                
-                <button 
-                  type="submit" 
-                  className="w-full bg-[#688F4E] text-white py-4 rounded-lg font-semibold hover:bg-[#2B463C] transition-colors disabled:bg-gray-400 flex items-center justify-center space-x-2" 
+
+                <button
+                  type="submit"
+                  className="w-full bg-[#688F4E] text-white py-4 rounded-lg font-semibold hover:bg-[#2B463C] transition-colors disabled:bg-gray-400 flex items-center justify-center space-x-2"
                   disabled={loading}
                 >
                   {loading ? (
@@ -614,20 +612,16 @@ const CheckoutPage: React.FC = () => {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-2xl shadow-sm p-6 sticky top-8">
               <h3 className="text-xl font-bold text-gray-900 mb-6">Order Summary</h3>
-              
+
               {/* Cart Items */}
               <div className="space-y-4 mb-6">
                 {cartItems.map(item => (
                   <div key={`${item.id}-${item.packSize}`} className="flex items-center space-x-4">
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="w-16 h-16 object-cover rounded-lg"
-                    />
+                    <img src={item.image} alt={item.name} className="w-16 h-16 object-cover rounded-lg" />
                     <div className="flex-1">
-                      <h4 className="font-medium text-gray-900">{item.name}</h4>
-                      <p className="text-sm text-gray-600">Pack of {item.packSize} x {item.quantity}</p>
-                      <p className="text-sm font-medium text-[#688F4E]">₹{(item.price * item.quantity).toFixed(0)}</p>
+                      <h4>{item.name}</h4>
+                      <p>Pack of {item.packSize} × {item.quantity}</p>
+                      <p>₹{(item.price * item.quantity).toFixed(2)}</p>
                     </div>
                   </div>
                 ))}

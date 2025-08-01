@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { CartItem } from '../components/Home/Cart';
 
 interface CartContextType {
   cartItems: CartItem[];
@@ -9,6 +8,15 @@ interface CartContextType {
   clearCart: () => void;
   isLoading: boolean; // Add loading state
 }
+interface CartItem {
+  id: string;
+  name: string;
+  packSize: number;
+  quantity: number;
+  price: number;
+  image: string;
+}
+
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
@@ -46,21 +54,21 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [cartItems, isLoading]);
 
+  // Example cart context update
   const addToCart = (item: CartItem) => {
-    console.log('Adding item to cart:', item);
-    setCartItems((prev) => {
-      const idx = prev.findIndex(
-        (i) => i.id === item.id && i.packSize === item.packSize
+    setCartItems(prev => {
+      const existingItem = prev.find(i =>
+        i.id === item.id && i.packSize === item.packSize
       );
-      if (idx >= 0) {
-        const updated = [...prev];
-        updated[idx].quantity += item.quantity;
-        console.log('Updated existing item, new cart:', updated);
-        return updated;
+
+      if (existingItem) {
+        return prev.map(i =>
+          i.id === item.id && i.packSize === item.packSize
+            ? { ...i, quantity: i.quantity + item.quantity }
+            : i
+        );
       }
-      const newCart = [...prev, item];
-      console.log('Added new item, new cart:', newCart);
-      return newCart;
+      return [...prev, item];
     });
   };
 

@@ -49,14 +49,12 @@ const ProfilePage: React.FC = () => {
   const [orderStats, setOrderStats] = useState<any>(null);
   const [totalSpent, setTotalSpent] = useState(0);
 
-  // Redirect if not authenticated
   useEffect(() => {
     if (!user) {
       navigate('/login');
     }
   }, [user, navigate]);
 
-  // Initialize edit form when user data is available
   useEffect(() => {
     if (user) {
       setEditForm({
@@ -77,19 +75,24 @@ const ProfilePage: React.FC = () => {
   const handleEditProfile = () => {
     setShowEditModal(true);
   };
-
   const handleSaveProfile = async () => {
     if (!token) return;
 
     setSaving(true);
     try {
-      const response = await fetch('http://localhost:3500/api/auth/profile', {
+      // Change this endpoint to match the backend route
+      const response = await fetch('http://localhost:3500/api/customer/profile', {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify({
+          firstName: editForm.firstName,
+          lastName: editForm.lastName,
+          phone: editForm.phone,
+          address: editForm.address  // Make sure address is included
+        }),
       });
 
       if (response.ok) {
@@ -116,17 +119,24 @@ const ProfilePage: React.FC = () => {
     name: `${user.firstName} ${user.lastName}`,
     email: user.email,
     phone: user.phone || "Not provided",
-    address: user.address ?
-      `${user.address.street || ''}, ${user.address.city || ''}, ${user.address.state || ''} ${user.address.zipCode || ''}`.replace(/^,\s*/, '').replace(/,\s*,/g, ',') || "Not provided" : "Not provided",
-    joinDate: new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+    address: user.address 
+      ? `${user.address.street || ''}, ${user.address.city || ''}, ${user.address.state || ''} ${user.address.zipCode || ''}`
+          .replace(/^,\s*/, '')
+          .replace(/,\s*,/g, ',') 
+      : "Not provided",
+    joinDate: new Date(user.createdAt).toLocaleDateString('en-US', { 
+      month: 'long', 
+      year: 'numeric' 
+    }),
     avatar: user.avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80",
     totalOrders: orderStats?.total || 0,
-    totalSpent: totalSpent || 0,
+    totalSpent: orderStats?.totalSpent || 0,
     loyaltyPoints: loyaltyInfo?.points || 0,
+    evolvPoints: loyaltyInfo?.evolvPoints || 0,
     currentTier: loyaltyInfo?.tier || 'bronze',
     nextTier: loyaltyInfo?.nextTier || 'silver',
     progressToNextTier: loyaltyInfo?.progressToNextTier || 0,
-    pointsToNextTier: loyaltyInfo ? (loyaltyInfo.nextTierPoints - loyaltyInfo.points) : 5000
+    nextTierPoints: loyaltyInfo?.nextTierPoints || 5000
   };
   const tiers = [
     { name: "Bronze", minPoints: 0, maxPoints: 4999, color: "#CD7F32", icon: Star },
@@ -158,43 +168,46 @@ const ProfilePage: React.FC = () => {
       fetchOrders();
     }
   }, [activeTab, user, token]);
-
-  // Fetch loyalty information and order statistics
   useEffect(() => {
     if (user && token) {
       const fetchLoyaltyAndStats = async () => {
         try {
-          // Fetch loyalty information
-          const loyaltyResponse = await fetch('http://localhost:3500/api/customer/loyalty', {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
+          const response = await fetch('http://localhost:3500/api/customer/dashboard', {
+            headers: { 'Authorization': `Bearer ${token}` }
           });
-
-          if (loyaltyResponse.ok) {
-            const loyaltyData = await loyaltyResponse.json();
-            setLoyaltyInfo(loyaltyData.data);
-          }
-
-          // Fetch order statistics
-          const statsResponse = await fetch('http://localhost:3500/api/customer/dashboard', {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          });
-
-          if (statsResponse.ok) {
-            const statsData = await statsResponse.json();
-            setOrderStats(statsData.data.orderStats);
-            setTotalSpent(statsData.data.totalSpent || 0);
+          
+          const data = await response.json();
+          
+          if (response.ok) {
+            setOrderStats(data.data.orderStats);
+            setTotalSpent(data.data.orderStats?.totalSpent || 0);
+            
+            // Get user profile for loyalty info
+            const userResponse = await fetch('http://localhost:3500/api/customer/profile', {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const userData = await userResponse.json();
+  
+            // Calculate progress for display
+            const nextTierPoints = userData.data.loyaltyTier === 'bronze' ? 5000 :
+              userData.data.loyaltyTier === 'silver' ? 10000 : 0;
+            const progress = userData.data.loyaltyTier === 'gold' ? 100 :
+              Math.min(100, Math.floor((userData.data.loyaltyPoints / nextTierPoints) * 100));
+  
+            setLoyaltyInfo({
+              points: userData.data.loyaltyPoints,
+              evolvPoints: userData.data.evolvPoints,
+              tier: userData.data.loyaltyTier,
+              nextTier: userData.data.loyaltyTier === 'bronze' ? 'silver' : 'gold',
+              nextTierPoints,
+              progressToNextTier: progress
+            });
           }
         } catch (error) {
-          console.error('Error fetching loyalty and stats:', error);
+          console.error('Error fetching data:', error);
         }
       };
-
+  
       fetchLoyaltyAndStats();
     }
   }, [user, token]);
@@ -205,7 +218,7 @@ const ProfilePage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F4F1E9] via-white to-[#B1D182]/10 pt-24">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Profile Header */}
+        { }
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
           <div className="flex flex-col md:flex-row items-center gap-6">
             <div className="relative">
@@ -239,46 +252,51 @@ const ProfilePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Loyalty Program Section */}
+        { }
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
           <div className="flex items-center gap-3 mb-6">
             <Crown className="w-8 h-8 text-[#FFD700]" />
             <h2 className="text-2xl font-bold text-[#2B463C]">Loyalty Program</h2>
           </div>
-
-          {/* Current Tier */}
           <div className="bg-gradient-to-r from-[#FFD700] to-[#FFA500] rounded-xl p-6 mb-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-bold text-white mb-2">Current Tier: {userData.currentTier}</h3>
-                <p className="text-white/90">{userData.loyaltyPoints} Points</p>
+                <h3 className="text-xl font-bold text-white mb-2">
+                  Current Tier: {userData.currentTier.charAt(0).toUpperCase() + userData.currentTier.slice(1)}
+                </h3>
+                <p className="text-white/90">
+                  Tier Points: {userData.loyaltyPoints} |
+                  Evolv Points: {userData.evolvPoints}
+                </p>
               </div>
               <Crown className="w-12 h-12 text-white" />
             </div>
           </div>
-          {/* Progress to Next Tier */}
+
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-700 font-medium">Progress to {userData.nextTier}</span>
-              <span className="text-[#688F4E] font-bold">{userData.progressToNextTier}%</span>
+              <span className="text-gray-700 font-medium">
+                Progress to {userData.nextTier === 'silver' ? 'Silver' : 'Gold'}
+              </span>
+              <span className="text-[#688F4E] font-bold">
+                {userData.progressToNextTier}%
+                ({userData.loyaltyPoints}/{userData.nextTierPoints})
+              </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3">
               <div
                 className="bg-gradient-to-r from-[#688F4E] to-[#B1D182] h-3 rounded-full transition-all duration-500"
-                style={{ width: `${Math.min(100, Math.max(0, userData.progressToNextTier))}%` }}
+                style={{ width: `${userData.progressToNextTier}%` }}
               ></div>
             </div>
-            <p className="text-sm text-gray-600 mt-2">
-              {userData.pointsToNextTier > 0 ? `${userData.pointsToNextTier} more points needed for ${userData.nextTier}` : 'You have reached the highest tier!'}
-            </p>
           </div>
 
-          {/* All Tiers */}
+          { }
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             {tiers.map((tier) => {
               const Icon = tier.icon;
               const isCurrentTier = tier.name === userData.currentTier;
-              const isUnlocked = userData.loyaltyPoints >= tier.minPoints;
+              const isUnlocked = userData.evolvPoints >= tier.minPoints;
 
               return (
                 <div
@@ -300,7 +318,7 @@ const ProfilePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Navigation Tabs */}
+        { }
         <div className="bg-white rounded-2xl shadow-lg mb-8">
           <div className="flex flex-wrap border-b border-gray-200">
             {[
@@ -326,11 +344,11 @@ const ProfilePage: React.FC = () => {
             })}
           </div>
 
-          {/* Tab Content */}
+          { }
           <div className="p-6">
             {activeTab === "overview" && (
               <div className="space-y-6">
-                {/* Personal Information */}
+                { }
                 <div>
                   <h3 className="text-xl font-bold text-[#2B463C] mb-4">Personal Information</h3>
                   <div className="grid md:grid-cols-2 gap-4">
@@ -358,7 +376,7 @@ const ProfilePage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Quick Stats */}
+                { }
                 <div>
                   <h3 className="text-xl font-bold text-[#2B463C] mb-4">Quick Stats</h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -374,8 +392,8 @@ const ProfilePage: React.FC = () => {
                     </div>
                     <div className="text-center p-4 bg-[#688F4E]/10 rounded-lg">
                       <Gift className="w-8 h-8 text-[#688F4E] mx-auto mb-2" />
-                      <p className="text-2xl font-bold text-[#2B463C]">{userData.loyaltyPoints}</p>
-                      <p className="text-sm text-gray-600">Loyalty Points</p>
+                      <p className="text-2xl font-bold text-[#2B463C]">{userData.evolvPoints}</p>
+                      <p className="text-sm text-gray-600">Evolv Points</p>
                     </div>
                     <div className="text-center p-4 bg-[#688F4E]/10 rounded-lg">
                       <Crown className="w-8 h-8 text-[#688F4E] mx-auto mb-2" />
@@ -421,15 +439,13 @@ const ProfilePage: React.FC = () => {
                         </p>
                         <p className="font-semibold text-[#2B463C]">₹{order.total}</p>
 
-                        {/* Loyalty Points Info */}
                         <div className="mt-2 p-3 bg-[#688F4E]/10 rounded-lg">
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-[#2B463C] font-medium">Loyalty Points Earned:</span>
                             <span className="text-[#688F4E] font-bold">
-                              {Math.floor(order.total / 100)} points
+                              {Math.floor(order.total)} points (Tier) + {Math.floor(order.total * (loyaltyInfo?.tier === 'bronze' ? 0.10 : loyaltyInfo?.tier === 'silver' ? 0.15 : 0.20))} points (Evolv)
                             </span>
                           </div>
-                          
                         </div>
 
                         <div className="flex items-center justify-between mt-3">
@@ -440,7 +456,7 @@ const ProfilePage: React.FC = () => {
                             View Details
                           </button>
 
-                          {/* Pay Now button for pending, non-COD orders */}
+                          { }
                           {order.status === 'pending' && order.payment?.method !== 'cash_on_delivery' && (
                             <button
                               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
@@ -512,7 +528,7 @@ const ProfilePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Edit Profile Modal */}
+      { }
       {showEditModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -529,7 +545,7 @@ const ProfilePage: React.FC = () => {
             </div>
 
             <div className="p-6 space-y-6">
-              {/* Personal Information */}
+              { }
               <div>
                 <h3 className="text-lg font-semibold text-[#2B463C] mb-4">Personal Information</h3>
                 <div className="grid grid-cols-2 gap-4">
@@ -563,7 +579,7 @@ const ProfilePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Address Information */}
+              { }
               <div>
                 <h3 className="text-lg font-semibold text-[#2B463C] mb-4">Address Information</h3>
                 <div className="grid grid-cols-2 gap-4">
@@ -663,4 +679,4 @@ const ProfilePage: React.FC = () => {
   );
 };
 
-export default ProfilePage; 
+export default ProfilePage;

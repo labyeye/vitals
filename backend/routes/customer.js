@@ -1,23 +1,11 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { protect, isCustomer } = require('../middleware/auth');
+
 const Product = require('../models/Product');
 const Order = require('../models/Order');
 const User = require('../models/User');
-const Loyalty = require('../models/Loyalty'); // Added Loyalty model
-const {getLoyaltyPoints, checkTierUpgrade} = require('../controller/loyaltyController');
-const getLoyaltyDetails = async (userId) => {
-  const loyalty = await Loyalty.findOne({ user: userId });
-  if (!loyalty) return null;
 
-  return {
-    points: loyalty.points,
-    tier: loyalty.tier,
-    nextTierPoints: loyalty.nextTierPoints,
-    progressToNextTier: loyalty.tier === 'gold' ? 100 : 
-      Math.min(100, Math.floor((loyalty.points / loyalty.nextTierPoints) * 100))
-  };
-};
 const router = express.Router();
 
 // Apply customer protection to all routes
@@ -26,7 +14,7 @@ router.use(protect, isCustomer);
 router.get('/loyalty', async (req, res) => {
   try {
     const loyaltyDetails = await getLoyaltyDetails(req.user._id);
-    
+
     if (!loyaltyDetails) {
       return res.status(404).json({
         success: false,
@@ -55,6 +43,7 @@ router.get('/dashboard', async (req, res) => {
         $group: {
           _id: null,
           total: { $sum: 1 },
+          totalSpent: { $sum: '$total' },
           pending: {
             $sum: {
               $cond: [{ $eq: ['$status', 'pending'] }, 1, 0]
@@ -74,25 +63,19 @@ router.get('/dashboard', async (req, res) => {
       }
     ]);
 
-    // Get total spent
-    const totalSpent = await Order.aggregate([
-      { $match: { customer: req.user._id, status: 'delivered' } },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: '$total' }
-        }
-      }
-    ]);
-
     // Get loyalty details
     const loyaltyDetails = await getLoyaltyDetails(req.user._id);
 
     res.status(200).json({
       success: true,
       data: {
-        orderStats: orderStats[0] || { total: 0, pending: 0, delivered: 0, cancelled: 0 },
-        totalSpent: totalSpent[0]?.total || 0,
+        orderStats: orderStats[0] || { 
+          total: 0, 
+          totalSpent: 0,
+          pending: 0, 
+          delivered: 0, 
+          cancelled: 0 
+        },
         loyalty: loyaltyDetails
       }
     });
@@ -110,7 +93,7 @@ router.get('/dashboard', async (req, res) => {
 router.get('/profile', async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select('-password');
-    
+
     res.status(200).json({
       success: true,
       data: user
@@ -198,7 +181,7 @@ router.get('/orders', async (req, res) => {
 
     // Build query
     let query = { customer: req.user._id };
-    
+
     if (status) {
       query.status = status;
     }
@@ -308,7 +291,7 @@ router.put('/orders/:id/cancel', [
     order.cancelledAt = new Date();
     order.cancelledBy = req.user._id;
     order.cancellationReason = reason || 'Cancelled by customer';
-    
+
     // Add timeline entry
     order.timeline.push({
       status: 'cancelled',
@@ -379,7 +362,7 @@ router.put('/orders/:id/status', [
       // Update order status
       order.status = 'delivered';
       order.deliveredAt = new Date();
-      
+
       // Add timeline entry
       order.timeline.push({
         status: 'delivered',
@@ -395,7 +378,7 @@ router.put('/orders/:id/status', [
         const bonusPoints = Math.floor(order.total / 50); // 2 points per ₹100 for delivery bonus
         loyalty.points += bonusPoints;
         loyalty.lifetimePoints += bonusPoints;
-        
+
         loyalty.history.push({
           type: 'earned',
           points: bonusPoints,
@@ -486,7 +469,7 @@ router.get('/orders/:id/details', async (req, res) => {
       currentPoints: loyalty.points,
       currentTier: loyalty.tier,
       nextTierPoints: loyalty.nextTierPoints,
-      progressToNextTier: loyalty.tier === 'gold' ? 100 : 
+      progressToNextTier: loyalty.tier === 'gold' ? 100 :
         Math.min(100, Math.floor((loyalty.points / loyalty.nextTierPoints) * 100))
     } : null;
 
@@ -529,7 +512,7 @@ router.get('/products', async (req, res) => {
 
     // Build query - only active products
     let query = { status: 'active' };
-    
+
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
@@ -604,7 +587,6 @@ router.get('/products/:id', async (req, res) => {
     });
   }
 });
-
 // @desc    Place new order
 // @route   POST /api/customer/orders
 // @access  Customer only
@@ -618,15 +600,35 @@ router.post('/orders', [
   body('items.*.quantity')
     .isInt({ min: 1 })
     .withMessage('Quantity must be at least 1'),
+  body('items.*.price')
+    .isNumeric()
+    .withMessage('Price must be a number'),
   body('shippingAddress')
     .isObject()
     .withMessage('Shipping address is required'),
   body('billingAddress')
+    .optional()
     .isObject()
-    .withMessage('Billing address is required'),
+    .withMessage('Billing address must be an object if provided'),
   body('payment.method')
     .isIn(['credit_card', 'debit_card', 'paypal', 'stripe', 'cash_on_delivery'])
-    .withMessage('Valid payment method is required')
+    .withMessage('Valid payment method is required'),
+  body('subtotal')
+    .isNumeric()
+    .withMessage('Subtotal must be a number'),
+  body('shippingCost')
+    .isNumeric()
+    .withMessage('Shipping cost must be a number'),
+  body('tax')
+    .isNumeric()
+    .withMessage('Tax must be a number'),
+  body('total')
+    .isNumeric()
+    .withMessage('Total must be a number'),
+  body('notes')
+    .optional()
+    .isString()
+    .withMessage('Notes must be a string')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -638,12 +640,19 @@ router.post('/orders', [
       });
     }
 
-    const { items, shippingAddress, billingAddress, payment, notes } = req.body;
+    const {
+      items,
+      shippingAddress,
+      billingAddress = shippingAddress, // Default to shipping address if not provided
+      payment,
+      notes,
+      subtotal,
+      shippingCost,
+      tax,
+      total
+    } = req.body;
 
-    // Validate products and calculate totals
-    let subtotal = 0;
-    const orderItems = [];
-
+    // Validate products and check stock
     for (const item of items) {
       const product = await Product.findById(item.product);
       
@@ -657,139 +666,122 @@ router.post('/orders', [
       if (product.status !== 'active') {
         return res.status(400).json({
           success: false,
-          message: `Product ${product.name} is not available`
+          message: `Product ${product.name} is not available for purchase`
         });
       }
 
       if (product.stock.trackStock && product.stock.quantity < item.quantity) {
         return res.status(400).json({
           success: false,
-          message: `Insufficient stock for ${product.name}`
+          message: `Insufficient stock for ${product.name} (available: ${product.stock.quantity})`
         });
       }
-
-      const itemTotal = product.price * item.quantity;
-      subtotal += itemTotal;
-
-      orderItems.push({
-        product: product._id,
-        quantity: item.quantity,
-        price: product.price,
-        total: itemTotal
-      });
     }
 
-    // Calculate shipping cost (simplified)
-    const shippingCost = subtotal > 1000 ? 0 : 50; // Free shipping over ₹1000
-
-    // Calculate tax (8%)
-    const tax = subtotal * 0.08;
-
-    // Calculate total
-    const total = subtotal + shippingCost + tax;
-
-    // Create order
+    // Create the order
     const order = new Order({
       customer: req.user._id,
-      items: orderItems,
+      items: items.map(item => ({
+        product: item.product,
+        quantity: item.quantity,
+        price: item.price,
+        packSize: item.packSize || null,
+        total: item.price * item.quantity
+      })),
       subtotal,
       tax,
       shipping: {
         cost: shippingCost,
-        method: 'standard'
+        method: 'standard' // or get from request if you have shipping options
       },
       total,
       payment: {
         method: payment.method,
-        status: payment.method === 'cash_on_delivery' ? 'pending' : 'pending'
+        status: payment.method === 'cash_on_delivery' ? 'pending' : 'pending',
+        transactionId: payment.transactionId || null
       },
       shippingAddress,
       billingAddress,
       notes: {
-        customer: notes?.customer || ''
-      }
+        customer: notes || ''
+      },
+      status: 'pending'
     });
+
+    // Save the order
     await order.save();
 
-    // Update product stock
-    for (const item of orderItems) {
-      await Product.findByIdAndUpdate(item.product, {
-        $inc: { 'stock.quantity': -item.quantity }
-      });
-    }
-
-    // Add initial timeline entry
-    await order.addTimelineEntry('pending', 'Order placed successfully', req.user._id);
-
-    // Initialize loyalty account if it doesn't exist
-    const existingLoyalty = await Loyalty.findOne({ user: req.user._id });
-    if (!existingLoyalty) {
-      await Loyalty.create({
-        user: req.user._id,
-        points: 0,
-        tier: 'bronze',
-        nextTierPoints: 5000
-      });
-    }
-
-    // Add loyalty points for order placement (small amount)
-    const loyalty = await Loyalty.findOne({ user: req.user._id });
-    if (loyalty) {
-      const pointsEarned = Math.floor(total / 100); // 1 point per ₹100 spent
-      loyalty.points += pointsEarned;
-      loyalty.lifetimePoints += pointsEarned;
-      
-      loyalty.history.push({
-        type: 'earned',
-        points: pointsEarned,
-        order: order._id,
-        description: `Earned ${pointsEarned} points from order #${order.orderNumber}`
-      });
-
-      // Check for tier upgrade
-      const { newTier, nextTierPoints } = loyalty.checkTierUpgrade();
-      if (newTier !== loyalty.tier) {
-        loyalty.history.push({
-          type: 'tier_upgrade',
-          points: 0,
-          description: `Upgraded from ${loyalty.tier} to ${newTier} tier`
-        });
-        loyalty.tier = newTier;
-        loyalty.nextTierPoints = nextTierPoints;
+    // Update product stock quantities
+    const bulkOps = items.map(item => ({
+      updateOne: {
+        filter: { _id: item.product },
+        update: { $inc: { 'stock.quantity': -item.quantity } }
       }
+    }));
+    
+    await Product.bulkWrite(bulkOps);
 
-      await loyalty.save();
+    // Add timeline entry
+    order.timeline.push({
+      status: 'pending',
+      message: 'Order placed successfully',
+      updatedBy: req.user._id,
+      updatedAt: new Date()
+    });
+    await order.save();
+    // Process loyalty points
+const user = await User.findById(req.user._id);
+let loyaltyResponse = null;
 
-      // Update user document for quick access
-      await User.findByIdAndUpdate(req.user._id, {
-        loyaltyPoints: loyalty.points,
-        loyaltyTier: loyalty.tier,
-        $push: {
-          loyaltyHistory: {
-            date: new Date(),
-            action: 'points_earned',
-            points: pointsEarned,
-            order: order._id
-          }
-        }
-      });
-    }
+if (user) {
+  const loyaltyResult = await user.addLoyaltyPoints(total, order); // Pass order as second parameter
+  
+  await user.save();
+  
+  // Add to loyalty history
+  user.loyaltyHistory.push({
+    date: new Date(),
+    action: 'order_points',
+    points: loyaltyResult.tierPoints,
+    order: order._id,
+    description: `Earned ${loyaltyResult.tierPoints} tier points and ${loyaltyResult.evolvPoints} evolv points from order`
+  });
 
-    res.status(201).json({
+  await user.save();
+
+  loyaltyResponse = {
+    pointsEarned: loyaltyResult.tierPoints,
+    evolvPointsEarned: loyaltyResult.evolvPoints,
+    newBalance: user.loyaltyPoints,
+    newTier: user.loyaltyTier,
+    nextTierInfo: user.getNextLoyaltyTier()
+  };
+}
+
+    // Prepare response
+    const response = {
       success: true,
       message: 'Order placed successfully',
       data: {
-        order,
-        loyaltyPointsEarned: loyalty ? Math.floor(total / 100) : 0,
-        newLoyaltyPoints: loyalty ? loyalty.points : 0,
-        newTier: loyalty ? loyalty.tier : 'bronze'
+        order: {
+          _id: order._id,
+          orderNumber: order.orderNumber,
+          status: order.status,
+          total: order.total,
+          createdAt: order.createdAt
+        },
+        loyalty: loyaltyResponse
       }
-    });
+    };
+
+    res.status(201).json(response);
+
   } catch (error) {
     console.error('Place order error:', error);
     res.status(500).json({
       success: false,
-      message: 'Error placing order'
+      message: 'Error placing order',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
@@ -800,7 +792,7 @@ router.post('/orders', [
 router.get('/addresses', async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
-    
+
     // For now, return the user's address
     // In a real app, you might have a separate Address model
     const addresses = user.address ? [user.address] : [];

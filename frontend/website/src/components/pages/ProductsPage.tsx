@@ -3,7 +3,7 @@ import { useCartContext } from "../../context/CartContext";
 import ProductGrid from "../Home/ProductGrid";
 import Reviews from "../Home/Review";
 import { getProducts } from "../../services/productService";
-
+import { CartItem } from "../Home/Cart";
 interface Product {
   id: string;
   name: string;
@@ -40,30 +40,21 @@ const ProductPage: React.FC = () => {
 
     fetchProducts();
   }, []);
-
-  const handleAddToCart = (
-    productId: string,
-    quantity: number,
-    packSize: number
-  ) => {
-    // Find the product being added
-    const productToAdd = products.find((p) => p.id === productId);
-
-    if (!productToAdd) return;
-
-    // Get the price or default to 0 if not found (though this shouldn't happen with valid packSize)
-    const itemPrice =
-      productToAdd.prices[packSize as keyof typeof productToAdd.prices] ?? 0;
-
+  const handleAddToCart = (productId: string, quantity: number, packSize: number) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+  
+    const price = product.prices[packSize] || 0;
+  
     const cartItem = {
       id: productId,
-      name: productToAdd.name,
+      name: product.name,
       packSize,
       quantity,
-      price: itemPrice,
-      image: productToAdd.image,
+      price,
+      image: product.image
     };
-
+  
     addToCart(cartItem);
   };
 

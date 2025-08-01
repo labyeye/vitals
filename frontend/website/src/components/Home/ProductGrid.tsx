@@ -4,11 +4,8 @@ import { Search, SlidersHorizontal } from "lucide-react";
 
 interface ProductGridProps {
   products: Product[];
-  onAddToCart: (
-    productId: string,
-    quantity: number,
-    packSize: number
-  ) => void;
+  onAddToCart: (productId: string, quantity: number, packSize: number) => void;
+  // Keep this signature to maintain compatibility
 }
 const ProductGrid: React.FC<ProductGridProps> = ({ products, onAddToCart }) => {
   const [searchTerm, setSearchTerm] = useState("");

@@ -48,26 +48,16 @@ const userSchema = new mongoose.Schema({
       default: 'USA'
     }
   },
-  // Add these to the userSchema
-  loyaltyPoints: {
-    type: Number,
-    default: 0,
-    min: 0
-  },
-  loyaltyTier: {
-    type: String,
-    enum: ['bronze', 'silver', 'gold'],
-    default: 'bronze'
-  },
-  loyaltyHistory: [{
-    date: Date,
-    action: String,
-    points: Number,
-    order: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Order'
-    }
-  }],
+  loyaltyPoints: { type: Number, default: 0 },
+evolvPoints: { type: Number, default: 0 },
+loyaltyTier: { type: String, enum: ['bronze', 'silver', 'gold'], default: 'bronze' },
+loyaltyHistory: [{
+  date: Date,
+  action: String,
+  points: Number,
+  order: { type: mongoose.Schema.Types.ObjectId, ref: 'Order' },
+  description: String
+}],
   profileImage: {
     type: String,
     default: null
@@ -133,6 +123,70 @@ userSchema.methods.getPublicProfile = function () {
 // Static method to find by email
 userSchema.statics.findByEmail = function (email) {
   return this.findOne({ email: email.toLowerCase() });
+};
+userSchema.methods.getNextLoyaltyTier = function() {
+  if (this.loyaltyTier === 'bronze') {
+    return {
+      currentTier: 'bronze',
+      nextTier: 'silver',
+      pointsNeeded: Math.max(0, 5000 - this.loyaltyPoints),
+      progress: Math.min(100, Math.floor((this.loyaltyPoints / 5000) * 100))
+    };
+  } else if (this.loyaltyTier === 'silver') {
+    return {
+      currentTier: 'silver',
+      nextTier: 'gold',
+      pointsNeeded: Math.max(0, 10000 - this.loyaltyPoints),
+      progress: Math.min(100, Math.floor((this.loyaltyPoints / 10000) * 100))
+    };
+  } else {
+    // Gold is the highest tier
+    return {
+      currentTier: 'gold',
+      nextTier: null,
+      pointsNeeded: 0,
+      progress: 100
+    };
+  }
+};
+userSchema.methods.addLoyaltyPoints = async function(orderTotal, order) {
+  // Calculate points based on current tier
+  let multiplier = 0.10; // bronze
+  if (this.loyaltyTier === 'silver') multiplier = 0.15;
+  if (this.loyaltyTier === 'gold') multiplier = 0.20;
+
+  const evolvPoints = Math.floor(orderTotal * multiplier);
+  const tierPoints = Math.floor(orderTotal); // 1:1 ratio for tier points
+
+  // Update points
+  this.evolvPoints += evolvPoints;
+  this.loyaltyPoints += tierPoints;
+
+  // Check for tier upgrade
+  if (this.loyaltyTier === 'bronze' && this.loyaltyPoints >= 5000) {
+    this.loyaltyTier = 'silver';
+  } else if (this.loyaltyTier === 'silver' && this.loyaltyPoints >= 10000) {
+    this.loyaltyTier = 'gold';
+  }
+
+  // Add to history
+  this.loyaltyHistory.push({
+    date: new Date(),
+    action: 'order_points',
+    points: tierPoints,
+    order: order ? order._id : null, // Handle case where order might be undefined
+    description: `Earned ${tierPoints} tier points and ${evolvPoints} evolv points from order`
+  });
+
+  await this.save();
+
+  return {
+    tierPoints,
+    evolvPoints,
+    newTier: this.loyaltyTier,
+    totalPoints: this.loyaltyPoints,
+    totalEvolvPoints: this.evolvPoints
+  };
 };
 
 module.exports = mongoose.model('User', userSchema); 
