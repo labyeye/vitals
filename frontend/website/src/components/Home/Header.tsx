@@ -52,7 +52,7 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick }) => {
   const { user, logout } = useAuth();
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/20 bg-[#f4f1e9]">
+    <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/20 bg-gradient-to-r from-[#466644] from-60% to-[#e8e2d0] to-100%">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-14 sm:h-16 md:h-18 lg:h-20">
           {/* Left Navigation (Desktop) */}
@@ -60,31 +60,31 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick }) => {
             <nav className="flex items-center space-x-3 lg:space-x-4 xl:space-x-5">
               <a
                 href="/"
-                className="text-black text-sm lg:text-base xl:text-m hover:text-[#688F4E] transition-colors duration-300 font-medium"
+                className="text-black text-sm lg:text-base xl:text-lg hover:text-[#688F4E] transition-colors duration-300 font-medium"
               >
                 Home
               </a>
               <a
                 href="about"
-                className="text-black text-sm lg:text-base xl:text-m hover:text-[#688F4E] transition-colors duration-300 font-medium"
+                className="text-black text-sm lg:text-base xl:text-lg hover:text-[#688F4E] transition-colors duration-300 font-medium"
               >
                 About
               </a>
               <a
                 href="products"
-                className="text-black text-sm lg:text-base xl:text-m hover:text-[#688F4E] transition-colors duration-300 font-medium"
+                className="text-black text-sm lg:text-base xl:text-lg hover:text-[#688F4E] transition-colors duration-300 font-medium"
               >
                 Products
               </a>
               <a
                 href="blogs"
-                className="text-black text-sm lg:text-base xl:text-m hover:text-[#688F4E] transition-colors duration-300 font-medium"
+                className="text-black text-sm lg:text-base xl:text-lg hover:text-[#688F4E] transition-colors duration-300 font-medium"
               >
                 Blogs
               </a>
               <a
                 href="contact"
-                className="text-black text-sm lg:text-base xl:text-m hover:text-[#688F4E] transition-colors duration-300 font-medium"
+                className="text-black text-sm lg:text-base xl:text-lg hover:text-[#688F4E] transition-colors duration-300 font-medium"
               >
                 Contact
               </a>
