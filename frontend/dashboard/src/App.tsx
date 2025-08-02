@@ -6,6 +6,7 @@ import Customers from './components/Customers';
 import Orders from './components/Orders';
 import Products from './components/Products';
 import Marketing from './components/Marketing';
+import PromoCodes from './components/PromoCodes';
 import AddProduct from './components/AddProduct';
 import ProductDetails from './components/ProductDetails';
 import CustomerDetails from './components/CustomerDetails';
@@ -149,6 +150,8 @@ function DashboardApp() {
             }
           />
         );
+      case 'promo-codes':
+        return <PromoCodes />;
       case 'analytics':
         return <Analytics />;
       case 'alerts':

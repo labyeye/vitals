@@ -4,6 +4,7 @@ const { protect, isAdmin } = require('../middleware/auth');
 const User = require('../models/User');
 const Product = require('../models/Product');
 const Order = require('../models/Order');
+const PromoCode = require('../models/PromoCode');
 
 const router = express.Router();
 
@@ -962,6 +963,426 @@ router.get('/analytics', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching analytics data'
+    });
+  }
+});
+
+// ==================== PROMO CODE ROUTES ====================
+
+// @desc    Get all promo codes
+// @route   GET /api/admin/promo-codes
+// @access  Admin only
+router.get('/promo-codes', async (req, res) => {
+  try {
+    const { page = 1, limit = 10, status, search } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    let query = {};
+
+    // Filter by status
+    if (status) {
+      if (status === 'active') {
+        const now = new Date();
+        query = {
+          isActive: true,
+          validFrom: { $lte: now },
+          validUntil: { $gte: now }
+        };
+      } else if (status === 'inactive') {
+        query.isActive = false;
+      } else if (status === 'expired') {
+        query.validUntil = { $lt: new Date() };
+      }
+    }
+
+    // Search by code or description
+    if (search) {
+      query.$or = [
+        { code: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const promoCodes = await PromoCode.find(query)
+      .populate('createdBy', 'firstName lastName email')
+      .populate('applicableProducts', 'name')
+      .populate('applicableCategories', 'name')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await PromoCode.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        promoCodes,
+        pagination: {
+          current: parseInt(page),
+          pages: Math.ceil(total / limit),
+          total
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get promo codes error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching promo codes'
+    });
+  }
+});
+
+// @desc    Get single promo code
+// @route   GET /api/admin/promo-codes/:id
+// @access  Admin only
+router.get('/promo-codes/:id', async (req, res) => {
+  try {
+    const promoCode = await PromoCode.findById(req.params.id)
+      .populate('createdBy', 'firstName lastName email')
+      .populate('applicableProducts', 'name price')
+      .populate('applicableCategories', 'name')
+      .populate('excludedProducts', 'name')
+      .populate('usageHistory.user', 'firstName lastName email')
+      .populate('usageHistory.order', 'orderNumber total');
+
+    if (!promoCode) {
+      return res.status(404).json({
+        success: false,
+        message: 'Promo code not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: promoCode
+    });
+  } catch (error) {
+    console.error('Get promo code error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching promo code'
+    });
+  }
+});
+
+// @desc    Create new promo code
+// @route   POST /api/admin/promo-codes
+// @access  Admin only
+router.post('/promo-codes', [
+  body('code')
+    .isLength({ min: 3, max: 20 })
+    .withMessage('Code must be between 3 and 20 characters')
+    .matches(/^[A-Z0-9]+$/)
+    .withMessage('Code must contain only uppercase letters and numbers'),
+  body('description')
+    .isLength({ min: 5, max: 200 })
+    .withMessage('Description must be between 5 and 200 characters'),
+  body('discountType')
+    .isIn(['percentage', 'fixed'])
+    .withMessage('Discount type must be percentage or fixed'),
+  body('discountValue')
+    .isFloat({ min: 0 })
+    .withMessage('Discount value must be a positive number'),
+  body('minimumOrderValue')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Minimum order value must be a positive number'),
+  body('maximumDiscount')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Maximum discount must be a positive number'),
+  body('usageLimit')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Usage limit must be at least 1'),
+  body('userUsageLimit')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('User usage limit must be at least 1'),
+  body('validFrom')
+    .isISO8601()
+    .withMessage('Valid from must be a valid date'),
+  body('validUntil')
+    .isISO8601()
+    .withMessage('Valid until must be a valid date')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const {
+      code,
+      description,
+      discountType,
+      discountValue,
+      minimumOrderValue,
+      maximumDiscount,
+      usageLimit,
+      userUsageLimit,
+      validFrom,
+      validUntil,
+      applicableProducts,
+      applicableCategories,
+      excludedProducts,
+      userRestrictions
+    } = req.body;
+
+    // Check if code already exists
+    const existingCode = await PromoCode.findOne({ code: code.toUpperCase() });
+    if (existingCode) {
+      return res.status(400).json({
+        success: false,
+        message: 'Promo code already exists'
+      });
+    }
+
+    // Validate percentage discount
+    if (discountType === 'percentage' && discountValue > 100) {
+      return res.status(400).json({
+        success: false,
+        message: 'Percentage discount cannot exceed 100%'
+      });
+    }
+
+    // Validate date range
+    if (new Date(validFrom) >= new Date(validUntil)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid from date must be before valid until date'
+      });
+    }
+
+    const promoCode = new PromoCode({
+      code: code.toUpperCase(),
+      description,
+      discountType,
+      discountValue,
+      minimumOrderValue: minimumOrderValue || 0,
+      maximumDiscount,
+      usageLimit,
+      userUsageLimit: userUsageLimit || 1,
+      validFrom: new Date(validFrom),
+      validUntil: new Date(validUntil),
+      applicableProducts: applicableProducts || [],
+      applicableCategories: applicableCategories || [],
+      excludedProducts: excludedProducts || [],
+      userRestrictions: userRestrictions || {},
+      createdBy: req.user._id
+    });
+
+    await promoCode.save();
+
+    // Populate the response
+    await promoCode.populate('createdBy', 'firstName lastName email');
+
+    res.status(201).json({
+      success: true,
+      message: 'Promo code created successfully',
+      data: promoCode
+    });
+  } catch (error) {
+    console.error('Create promo code error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error creating promo code'
+    });
+  }
+});
+
+// @desc    Update promo code
+// @route   PUT /api/admin/promo-codes/:id
+// @access  Admin only
+router.put('/promo-codes/:id', [
+  body('description')
+    .optional()
+    .isLength({ min: 5, max: 200 })
+    .withMessage('Description must be between 5 and 200 characters'),
+  body('discountValue')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Discount value must be a positive number'),
+  body('minimumOrderValue')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Minimum order value must be a positive number'),
+  body('maximumDiscount')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Maximum discount must be a positive number'),
+  body('usageLimit')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Usage limit must be at least 1'),
+  body('userUsageLimit')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('User usage limit must be at least 1'),
+  body('validUntil')
+    .optional()
+    .isISO8601()
+    .withMessage('Valid until must be a valid date')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const promoCode = await PromoCode.findById(req.params.id);
+    if (!promoCode) {
+      return res.status(404).json({
+        success: false,
+        message: 'Promo code not found'
+      });
+    }
+
+    const {
+      description,
+      discountValue,
+      minimumOrderValue,
+      maximumDiscount,
+      usageLimit,
+      userUsageLimit,
+      validUntil,
+      applicableProducts,
+      applicableCategories,
+      excludedProducts,
+      userRestrictions,
+      isActive
+    } = req.body;
+
+    // Update fields
+    if (description !== undefined) promoCode.description = description;
+    if (discountValue !== undefined) {
+      if (promoCode.discountType === 'percentage' && discountValue > 100) {
+        return res.status(400).json({
+          success: false,
+          message: 'Percentage discount cannot exceed 100%'
+        });
+      }
+      promoCode.discountValue = discountValue;
+    }
+    if (minimumOrderValue !== undefined) promoCode.minimumOrderValue = minimumOrderValue;
+    if (maximumDiscount !== undefined) promoCode.maximumDiscount = maximumDiscount;
+    if (usageLimit !== undefined) promoCode.usageLimit = usageLimit;
+    if (userUsageLimit !== undefined) promoCode.userUsageLimit = userUsageLimit;
+    if (validUntil !== undefined) {
+      const newValidUntil = new Date(validUntil);
+      if (promoCode.validFrom >= newValidUntil) {
+        return res.status(400).json({
+          success: false,
+          message: 'Valid until date must be after valid from date'
+        });
+      }
+      promoCode.validUntil = newValidUntil;
+    }
+    if (applicableProducts !== undefined) promoCode.applicableProducts = applicableProducts;
+    if (applicableCategories !== undefined) promoCode.applicableCategories = applicableCategories;
+    if (excludedProducts !== undefined) promoCode.excludedProducts = excludedProducts;
+    if (userRestrictions !== undefined) promoCode.userRestrictions = userRestrictions;
+    if (isActive !== undefined) promoCode.isActive = isActive;
+
+    await promoCode.save();
+    await promoCode.populate('createdBy', 'firstName lastName email');
+
+    res.status(200).json({
+      success: true,
+      message: 'Promo code updated successfully',
+      data: promoCode
+    });
+  } catch (error) {
+    console.error('Update promo code error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating promo code'
+    });
+  }
+});
+
+// @desc    Delete promo code
+// @route   DELETE /api/admin/promo-codes/:id
+// @access  Admin only
+router.delete('/promo-codes/:id', async (req, res) => {
+  try {
+    const promoCode = await PromoCode.findById(req.params.id);
+    
+    if (!promoCode) {
+      return res.status(404).json({
+        success: false,
+        message: 'Promo code not found'
+      });
+    }
+
+    // Check if promo code has been used
+    if (promoCode.usageCount > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot delete promo code that has been used. Consider deactivating it instead.'
+      });
+    }
+
+    await PromoCode.findByIdAndDelete(req.params.id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Promo code deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete promo code error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting promo code'
+    });
+  }
+});
+
+// @desc    Get promo code usage statistics
+// @route   GET /api/admin/promo-codes/:id/stats
+// @access  Admin only
+router.get('/promo-codes/:id/stats', async (req, res) => {
+  try {
+    const promoCode = await PromoCode.findById(req.params.id)
+      .populate('usageHistory.user', 'firstName lastName email')
+      .populate('usageHistory.order', 'orderNumber total createdAt');
+
+    if (!promoCode) {
+      return res.status(404).json({
+        success: false,
+        message: 'Promo code not found'
+      });
+    }
+
+    const stats = {
+      totalUsage: promoCode.usageCount,
+      totalDiscount: promoCode.usageHistory.reduce((sum, usage) => sum + usage.discountApplied, 0),
+      averageDiscount: promoCode.usageCount > 0 
+        ? promoCode.usageHistory.reduce((sum, usage) => sum + usage.discountApplied, 0) / promoCode.usageCount 
+        : 0,
+      uniqueUsers: [...new Set(promoCode.usageHistory.map(usage => usage.user._id.toString()))].length,
+      recentUsage: promoCode.usageHistory.slice(-10),
+      remainingUsage: promoCode.usageLimit ? promoCode.usageLimit - promoCode.usageCount : 'Unlimited'
+    };
+
+    res.status(200).json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('Get promo code stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching promo code statistics'
     });
   }
 });

@@ -28,7 +28,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (userData: RegisterData) => Promise<void>;
+  register: (userData: RegisterData) => Promise<any>;
   logout: () => void;
   isLoading: boolean;
   error: string | null;
@@ -64,7 +64,7 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-const API_BASE_URL = 'https://vitals-iu4r.onrender.com/api';
+const API_BASE_URL = 'http://localhost:3500/api';
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => {
@@ -187,15 +187,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const data = await response.json();
 
       if (response.ok) {
-        setToken(data.token);
-        setUser(data.user);
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        // Don't auto-login after registration, email verification required
+        // The backend now returns user data without token
+        return data; // Return success data for the component to handle
       } else {
         setError(data.message || 'Registration failed');
+        throw new Error(data.message || 'Registration failed');
       }
     } catch (error) {
-      setError('Network error. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Network error. Please try again.';
+      setError(errorMessage);
+      throw error;
     } finally {
       setIsLoading(false);
     }

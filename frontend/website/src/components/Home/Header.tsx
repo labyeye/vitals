@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ShoppingCart, Menu, X, Search, Heart, User, LogOut } from "lucide-react";
+import { ShoppingCart, Menu, X, Search, Heart, User, LogOut, Crown, Award, Medal } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import logo from "../../assets/images/logoblack.png";
@@ -8,6 +8,44 @@ interface HeaderProps {
   cartCount: number;
   onCartClick: () => void;
 }
+
+// Tier utility functions
+const getTierInfo = (tier: string) => {
+  switch (tier?.toLowerCase()) {
+    case 'bronze':
+      return {
+        icon: Medal,
+        color: '#CD7F32',
+        bgColor: 'bg-amber-100',
+        textColor: 'text-amber-800',
+        name: 'Bronze'
+      };
+    case 'silver':
+      return {
+        icon: Award,
+        color: '#C0C0C0',
+        bgColor: 'bg-gray-100',
+        textColor: 'text-gray-800',
+        name: 'Silver'
+      };
+    case 'gold':
+      return {
+        icon: Crown,
+        color: '#FFD700',
+        bgColor: 'bg-yellow-100',
+        textColor: 'text-yellow-800',
+        name: 'Gold'
+      };
+    default:
+      return {
+        icon: Medal,
+        color: '#CD7F32',
+        bgColor: 'bg-amber-100',
+        textColor: 'text-amber-800',
+        name: 'Bronze'
+      };
+  }
+};
 
 const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -59,17 +97,10 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick }) => {
               <img
                 src={logo}
                 alt="Company Logo"
-                className="h-12 sm:h-14 md:h-16 lg:h-18 xl:h-20 w-auto"
+                className="h-18 sm:h-16 md:h-22 lg:h-30 xl:h-40 w-auto"
               />
             </a>
-            <div className="hidden md:flex flex-col justify-center border-l border-[#688F4E] pl-2 lg:pl-3 xl:pl-4">
-              <span className="text-base lg:text-lg xl:text-xl font-bold text-[#688F4E] uppercase tracking-wider vertical-rl">
-                Evolv
-              </span>
-              <span className="text-xs lg:text-xs xl:text-sm text-black mt-0 vertical-rl">
-                Fresh feasts, great treats
-              </span>
-            </div>
+            
           </div>
 
           {/* Right Navigation (Desktop) */}
@@ -81,11 +112,27 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick }) => {
               <Heart className="w-5 h-5 lg:w-6 lg:h-6 xl:w-6 xl:h-7" />
             </button>
             {user ? (
-              <div className="relative group">
+              <div className="relative group flex items-center space-x-2">
+                {/* Tier Badge */}
+                {(() => {
+                  const tierInfo = getTierInfo(user.loyaltyTier || 'bronze');
+                  const TierIcon = tierInfo.icon;
+                  return (
+                    <div className={`flex items-center space-x-1 px-2 py-1 rounded-full ${tierInfo.bgColor} border`}>
+                      <TierIcon className="w-4 h-4" style={{ color: tierInfo.color }} />
+                      <span className={`text-xs font-medium ${tierInfo.textColor}`}>
+                        {tierInfo.name}
+                      </span>
+                    </div>
+                  );
+                })()}
+                
+                {/* Profile Button */}
                 <button className="p-1 lg:p-1.5 xl:p-2 text-black hover:text-[#688F4E] transition-colors duration-300 hover:bg-[#F4F1E9] rounded-full">
                   <User className="w-5 h-5 lg:w-6 lg:h-6 xl:w-6 xl:h-7" />
                 </button>
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-[#B1D182]/20 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
+                
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-[#B1D182]/20 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50" style={{ top: '100%' }}>
                   <div className="py-2">
                     <div className="px-4 py-2 text-sm text-[#2B463C] border-b border-[#B1D182]/20">
                       Welcome, {user.firstName}!
@@ -221,8 +268,21 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick }) => {
                 </button>
                 {user ? (
                   <div className="flex flex-col space-y-2">
-                    <div className="px-4 py-2 text-sm text-[#2B463C] border-b border-[#B1D182]/20">
-                      Welcome, {user.firstName}!
+                    <div className="px-4 py-2 text-sm text-[#2B463C] border-b border-[#B1D182]/20 flex items-center justify-between">
+                      <span>Welcome, {user.firstName}!</span>
+                      {/* Mobile Tier Badge */}
+                      {(() => {
+                        const tierInfo = getTierInfo(user.loyaltyTier || 'bronze');
+                        const TierIcon = tierInfo.icon;
+                        return (
+                          <div className={`flex items-center space-x-1 px-2 py-1 rounded-full ${tierInfo.bgColor} border text-xs`}>
+                            <TierIcon className="w-3 h-3" style={{ color: tierInfo.color }} />
+                            <span className={`font-medium ${tierInfo.textColor}`}>
+                              {tierInfo.name}
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </div>
                     <Link
                       to="/profile"

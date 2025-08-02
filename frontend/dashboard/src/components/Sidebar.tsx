@@ -11,7 +11,8 @@ import {
   Shield,
   AlertTriangle,
   LogOut,
-  User
+  User,
+  Percent
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -29,6 +30,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
     { id: 'orders', icon: ShoppingCart, label: 'Orders' },
     { id: 'products', icon: Package, label: 'Products' },
     { id: 'marketing', icon: Megaphone, label: 'Marketing' },
+    { id: 'promo-codes', icon: Percent, label: 'Promo Codes' },
     { id: 'alerts', icon: AlertTriangle, label: 'Alerts' },
     { id: 'security', icon: Shield, label: 'Security' },
     { id: 'settings', icon: Settings, label: 'Settings' }

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowLeft, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 const Register: React.FC = () => {
@@ -17,11 +17,14 @@ const Register: React.FC = () => {
     zipCode: '',
     country: 'USA'
   });
+  const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [errors, setErrors] = useState<{[key: string]: string}>({});
-  const { register, isLoading, error, clearError } = useAuth();
-  const navigate = useNavigate();
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
+
+  const { register } = useAuth();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -75,7 +78,7 @@ const Register: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    clearError();
+    setErrors({});
     
     if (!validateForm()) {
       return;
@@ -97,10 +100,15 @@ const Register: React.FC = () => {
     };
 
     try {
+      setIsLoading(true);
       await register(userData);
-      navigate('/');
+      // If we reach here, registration was successful
+      setRegistrationSuccess(true);
+      setUserEmail(formData.email);
     } catch (error) {
       // Error is handled by the auth context
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -113,21 +121,38 @@ const Register: React.FC = () => {
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Home
           </Link>
-          <h2 className="text-3xl font-bold text-[#2B463C] mb-2">
-            Create Account
-          </h2>
-          <p className="text-[#688F4E] text-sm">
-            Join Evolv for premium protein shakes
-          </p>
+          {!registrationSuccess ? (
+            <>
+              <h2 className="text-3xl font-bold text-[#2B463C] mb-2">
+                Create Account
+              </h2>
+              <p className="text-[#688F4E] text-sm">
+                Join Evolv for premium protein shakes
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-8 h-8 text-green-600" />
+              </div>
+              <h2 className="text-3xl font-bold text-[#2B463C] mb-2">
+                Check Your Email
+              </h2>
+              <p className="text-[#688F4E] text-sm">
+                We've sent a verification link to {userEmail}
+              </p>
+            </>
+          )}
         </div>
 
-        {/* Register Form */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 border border-[#B1D182]/20">
+        {!registrationSuccess ? (
+          /* Register Form */
+          <div className="bg-white rounded-2xl shadow-lg p-8 border border-[#B1D182]/20">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Error Message */}
-            {error && (
+            {Object.keys(errors).length > 0 && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                {error}
+                {Object.values(errors)[0]}
               </div>
             )}
 
@@ -406,6 +431,36 @@ const Register: React.FC = () => {
             </p>
           </div>
         </div>
+        ) : (
+          /* Success Message */
+          <div className="bg-white rounded-2xl shadow-lg p-8 border border-[#B1D182]/20 text-center">
+            <div className="space-y-4">
+              <p className="text-gray-600">
+                Please check your email and click the verification link to activate your account.
+              </p>
+              <p className="text-sm text-[#688F4E]">
+                Didn't receive the email? Check your spam folder or{' '}
+                <button
+                  onClick={() => {
+                    // TODO: Add resend verification functionality
+                    console.log('Resend verification email');
+                  }}
+                  className="text-[#2B463C] hover:text-[#688F4E] font-semibold transition-colors duration-300"
+                >
+                  resend verification email
+                </button>
+              </p>
+              <div className="pt-4">
+                <Link
+                  to="/login"
+                  className="inline-flex items-center justify-center w-full bg-[#2B463C] text-white py-3 px-4 rounded-xl hover:bg-[#688F4E] transition-colors duration-300 font-semibold"
+                >
+                  Go to Login
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="text-center">

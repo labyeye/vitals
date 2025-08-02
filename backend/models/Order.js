@@ -76,8 +76,17 @@ items: [{
     code: String,
     type: {
       type: String,
-      enum: ['percentage', 'fixed'],
+      enum: ['percentage', 'fixed', 'evolv_points'],
       default: 'fixed'
+    },
+    promoCode: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'PromoCode'
+    },
+    evolvPointsUsed: {
+      type: Number,
+      default: 0,
+      min: [0, 'Evolv points used cannot be negative']
     }
   },
   total: {

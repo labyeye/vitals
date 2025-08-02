@@ -5,6 +5,7 @@ const { protect, isCustomer } = require('../middleware/auth');
 const Product = require('../models/Product');
 const Order = require('../models/Order');
 const User = require('../models/User');
+const PromoCode = require('../models/PromoCode');
 
 const router = express.Router();
 
@@ -637,6 +638,163 @@ router.get('/products/:id', async (req, res) => {
     });
   }
 });
+
+// @desc    Validate promo code
+// @route   POST /api/customer/validate-promo
+// @access  Customer only
+router.post('/validate-promo', [
+  body('code')
+    .notEmpty()
+    .withMessage('Promo code is required'),
+  body('orderValue')
+    .isNumeric()
+    .withMessage('Order value must be a number'),
+  body('items')
+    .optional()
+    .isArray()
+    .withMessage('Items must be an array')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { code, orderValue, items = [] } = req.body;
+
+    // Find the promo code
+    const promoCode = await PromoCode.findValidCode(code);
+    if (!promoCode) {
+      return res.status(404).json({
+        success: false,
+        message: 'Invalid or expired promo code'
+      });
+    }
+
+    // Check if user meets requirements
+    const user = await User.findById(req.user._id);
+    
+    // Check new user restriction
+    if (promoCode.userRestrictions.newUsersOnly) {
+      const userOrderCount = await Order.countDocuments({ customer: req.user._id });
+      if (userOrderCount > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'This promo code is only valid for new users'
+        });
+      }
+    }
+
+    // Check loyalty tier requirement
+    if (promoCode.userRestrictions.loyaltyTierRequired) {
+      if (!user.loyaltyTier || user.loyaltyTier !== promoCode.userRestrictions.loyaltyTierRequired) {
+        return res.status(400).json({
+          success: false,
+          message: `This promo code requires ${promoCode.userRestrictions.loyaltyTierRequired} loyalty tier`
+        });
+      }
+    }
+
+    // Validate promo code
+    const validation = promoCode.isValid(req.user._id, orderValue);
+    if (!validation.valid) {
+      return res.status(400).json({
+        success: false,
+        message: validation.reason
+      });
+    }
+
+    // Calculate discount
+    const discountAmount = promoCode.calculateDiscount(orderValue, items);
+
+    res.status(200).json({
+      success: true,
+      message: 'Promo code is valid',
+      data: {
+        code: promoCode.code,
+        description: promoCode.description,
+        discountType: promoCode.discountType,
+        discountValue: promoCode.discountValue,
+        discountAmount,
+        finalTotal: Math.max(0, orderValue - discountAmount)
+      }
+    });
+  } catch (error) {
+    console.error('Validate promo code error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error validating promo code'
+    });
+  }
+});
+
+// @desc    Validate Evolv points redemption
+// @route   POST /api/customer/validate-evolv-points
+// @access  Customer only
+router.post('/validate-evolv-points', [
+  body('pointsToRedeem')
+    .isInt({ min: 1 })
+    .withMessage('Points to redeem must be a positive integer'),
+  body('orderValue')
+    .isNumeric()
+    .withMessage('Order value must be a number')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { pointsToRedeem, orderValue } = req.body;
+
+    // Get user with current Evolv points
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Check if user can redeem the requested points
+    if (!user.canRedeemEvolvPoints(pointsToRedeem)) {
+      return res.status(400).json({
+        success: false,
+        message: `Insufficient Evolv points. Available: ${user.evolvPoints}, Requested: ${pointsToRedeem}`
+      });
+    }
+
+    // Calculate discount (1 Evolv point = ₹1 discount)
+    const discountAmount = Math.min(pointsToRedeem, orderValue);
+    const actualPointsUsed = discountAmount;
+
+    res.status(200).json({
+      success: true,
+      message: 'Evolv points validation successful',
+      data: {
+        pointsToRedeem: actualPointsUsed,
+        discountAmount,
+        availablePoints: user.evolvPoints,
+        finalTotal: Math.max(0, orderValue - discountAmount)
+      }
+    });
+  } catch (error) {
+    console.error('Validate Evolv points error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error validating Evolv points'
+    });
+  }
+});
+
 // @desc    Place new order
 // @route   POST /api/customer/orders
 // @access  Customer only
@@ -678,7 +836,15 @@ router.post('/orders', [
   body('notes')
     .optional()
     .isString()
-    .withMessage('Notes must be a string')
+    .withMessage('Notes must be a string'),
+  body('promoCode')
+    .optional()
+    .isString()
+    .withMessage('Promo code must be a string'),
+  body('evolvPointsToRedeem')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Evolv points to redeem must be a non-negative integer')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -699,8 +865,18 @@ router.post('/orders', [
       subtotal,
       shippingCost,
       tax,
-      total
+      total,
+      promoCode,
+      evolvPointsToRedeem
     } = req.body;
+
+    // Validate mutual exclusivity of promo code and Evolv points
+    if (promoCode && evolvPointsToRedeem && evolvPointsToRedeem > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'You cannot use both promo code and Evolv points redemption on the same order'
+      });
+    }
 
     // Validate products and check stock
     for (const item of items) {
@@ -728,6 +904,74 @@ router.post('/orders', [
       }
     }
 
+    // Handle promo code validation if provided
+    let appliedPromoCode = null;
+    let discountAmount = 0;
+    let evolvPointsUsed = 0;
+    let discountType = 'fixed';
+    
+    if (promoCode) {
+      appliedPromoCode = await PromoCode.findValidCode(promoCode);
+      if (!appliedPromoCode) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid or expired promo code'
+        });
+      }
+
+      // Validate promo code for this user and order
+      const validation = appliedPromoCode.isValid(req.user._id, subtotal);
+      if (!validation.valid) {
+        return res.status(400).json({
+          success: false,
+          message: validation.reason
+        });
+      }
+
+      // Calculate discount
+      discountAmount = appliedPromoCode.calculateDiscount(subtotal, items);
+      discountType = appliedPromoCode.discountType;
+      
+      // Verify the total matches expected calculation
+      const expectedTotal = subtotal + tax + shippingCost - discountAmount;
+      if (Math.abs(total - expectedTotal) > 0.01) { // Allow for small rounding differences
+        return res.status(400).json({
+          success: false,
+          message: 'Order total does not match calculated total with discount'
+        });
+      }
+    } else if (evolvPointsToRedeem && evolvPointsToRedeem > 0) {
+      // Handle Evolv points redemption
+      const user = await User.findById(req.user._id);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+      }
+
+      if (!user.canRedeemEvolvPoints(evolvPointsToRedeem)) {
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient Evolv points. Available: ${user.evolvPoints}, Requested: ${evolvPointsToRedeem}`
+        });
+      }
+
+      // Calculate Evolv points discount
+      discountAmount = Math.min(evolvPointsToRedeem, subtotal);
+      evolvPointsUsed = discountAmount;
+      discountType = 'evolv_points';
+
+      // Verify the total matches expected calculation
+      const expectedTotal = subtotal + tax + shippingCost - discountAmount;
+      if (Math.abs(total - expectedTotal) > 0.01) {
+        return res.status(400).json({
+          success: false,
+          message: 'Order total does not match calculated total with Evolv points discount'
+        });
+      }
+    }
+
     // Create the order
     const order = new Order({
       customer: req.user._id,
@@ -743,6 +987,13 @@ router.post('/orders', [
       shipping: {
         cost: shippingCost,
         method: 'standard' // or get from request if you have shipping options
+      },
+      discount: {
+        amount: discountAmount,
+        code: appliedPromoCode ? appliedPromoCode.code : (evolvPointsUsed > 0 ? 'EVOLV_POINTS' : null),
+        type: discountType,
+        promoCode: appliedPromoCode ? appliedPromoCode._id : null,
+        evolvPointsUsed: evolvPointsUsed
       },
       total,
       payment: {
@@ -779,22 +1030,46 @@ router.post('/orders', [
       updatedAt: new Date()
     });
     await order.save();
+
+    // Apply promo code usage if used
+    if (appliedPromoCode && discountAmount > 0) {
+      await appliedPromoCode.applyToOrder(req.user._id, order._id, discountAmount);
+    }
+
+    // Apply Evolv points redemption if used
+    if (evolvPointsUsed > 0) {
+      const user = await User.findById(req.user._id);
+      const redemptionResult = user.redeemEvolvPoints(evolvPointsUsed, subtotal);
+      await user.save();
+      
+      // Add redemption info to order notes
+      order.notes.admin = `Evolv points redeemed: ${redemptionResult.pointsUsed} points for ₹${redemptionResult.discountAmount} discount`;
+      await order.save();
+    }
+
     // Process loyalty points
 const user = await User.findById(req.user._id);
 let loyaltyResponse = null;
 
 if (user) {
-  const loyaltyResult = await user.addLoyaltyPoints(total, order); // Pass order as second parameter
+  // Don't award Evolv points if user used promo code or redeemed Evolv points
+  const skipEvolvPoints = (appliedPromoCode && discountAmount > 0) || (evolvPointsUsed > 0);
+  
+  const loyaltyResult = await user.addLoyaltyPoints(total, order, skipEvolvPoints); // Pass skipEvolvPoints flag
   
   await user.save();
   
   // Add to loyalty history
+  const historyDescription = skipEvolvPoints 
+    ? `Earned ${loyaltyResult.tierPoints} tier points from order (no Evolv points due to discount applied)`
+    : `Earned ${loyaltyResult.tierPoints} tier points and ${loyaltyResult.evolvPoints} evolv points from order`;
+    
   user.loyaltyHistory.push({
     date: new Date(),
     action: 'order_points',
     points: loyaltyResult.tierPoints,
     order: order._id,
-    description: `Earned ${loyaltyResult.tierPoints} tier points and ${loyaltyResult.evolvPoints} evolv points from order`
+    description: historyDescription
   });
 
   await user.save();

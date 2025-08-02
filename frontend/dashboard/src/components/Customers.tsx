@@ -40,7 +40,7 @@ const Customers: React.FC<CustomersProps> = ({ onViewDetails }) => {
   });
 
   const { token } = useAuth();
-  const API_BASE_URL = 'https://vitals-iu4r.onrender.com/api';
+  const API_BASE_URL = 'http://localhost:3500/api';
 
   useEffect(() => {
     fetchCustomers();

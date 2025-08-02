@@ -6,7 +6,35 @@ interface CartContextType {
   updateQuantity: (cartItemId: string, newQuantity: number) => void;
   removeItem: (cartItemId: string) => void;
   clearCart: () => void;
-  isLoading: boolean; // Add loading state
+  isLoading: boolean;
+  promoCode: PromoCodeData | null;
+  applyPromoCode: (code: string) => Promise<void>;
+  removePromoCode: () => void;
+  promoCodeLoading: boolean;
+  promoCodeError: string | null;
+  evolvPointsRedemption: EvolvPointsData | null;
+  applyEvolvPoints: (pointsToRedeem: number) => Promise<void>;
+  removeEvolvPoints: () => void;
+  evolvPointsLoading: boolean;
+  evolvPointsError: string | null;
+  userEvolvPoints: number;
+  fetchUserEvolvPoints: () => Promise<void>;
+}
+
+interface EvolvPointsData {
+  pointsToRedeem: number;
+  discountAmount: number;
+  availablePoints: number;
+  finalTotal: number;
+}
+
+interface PromoCodeData {
+  code: string;
+  description: string;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;
+  discountAmount: number;
+  finalTotal: number;
 }
 interface CartItem {
   id: string;
@@ -22,7 +50,14 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true); // Add loading state
+  const [isLoading, setIsLoading] = useState(true);
+  const [promoCode, setPromoCode] = useState<PromoCodeData | null>(null);
+  const [promoCodeLoading, setPromoCodeLoading] = useState(false);
+  const [promoCodeError, setPromoCodeError] = useState<string | null>(null);
+  const [evolvPointsRedemption, setEvolvPointsRedemption] = useState<EvolvPointsData | null>(null);
+  const [evolvPointsLoading, setEvolvPointsLoading] = useState(false);
+  const [evolvPointsError, setEvolvPointsError] = useState<string | null>(null);
+  const [userEvolvPoints, setUserEvolvPoints] = useState<number>(0);
 
   // Initialize cart from localStorage
   useEffect(() => {
@@ -97,11 +132,161 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const clearCart = () => {
     console.log('Clearing cart');
     setCartItems([]);
+    setPromoCode(null);
+    setEvolvPointsRedemption(null);
+  };
+
+  // Calculate cart totals
+  const calculateSubtotal = () => {
+    return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+  };
+
+  const applyPromoCode = async (code: string) => {
+    setPromoCodeLoading(true);
+    setPromoCodeError(null);
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Please login to apply promo codes');
+      }
+
+      const subtotal = calculateSubtotal();
+      const items = cartItems.map(item => ({
+        product: item.id,
+        quantity: item.quantity,
+        price: item.price,
+        total: item.price * item.quantity
+      }));
+
+      const response = await fetch('http://localhost:3500/api/customer/validate-promo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          code,
+          orderValue: subtotal,
+          items
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to apply promo code');
+      }
+
+      setPromoCode(data.data);
+    } catch (error: any) {
+      setPromoCodeError(error.message);
+      throw error;
+    } finally {
+      setPromoCodeLoading(false);
+    }
+  };
+
+  const removePromoCode = () => {
+    setPromoCode(null);
+    setPromoCodeError(null);
+  };
+
+  // Fetch user's current Evolv points
+  const fetchUserEvolvPoints = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await fetch('http://localhost:3500/api/customer/profile', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUserEvolvPoints(data.data.evolvPoints || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching user Evolv points:', error);
+    }
+  };
+
+  const applyEvolvPoints = async (pointsToRedeem: number) => {
+    setEvolvPointsLoading(true);
+    setEvolvPointsError(null);
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Please login to redeem Evolv points');
+      }
+
+      // Clear promo code if applied (mutual exclusivity)
+      if (promoCode) {
+        setPromoCode(null);
+        setPromoCodeError(null);
+      }
+
+      const subtotal = calculateSubtotal();
+
+      const response = await fetch('http://localhost:3500/api/customer/validate-evolv-points', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          pointsToRedeem,
+          orderValue: subtotal
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to apply Evolv points');
+      }
+
+      setEvolvPointsRedemption(data.data);
+      setUserEvolvPoints(data.data.availablePoints - data.data.pointsToRedeem);
+    } catch (error: any) {
+      setEvolvPointsError(error.message);
+      throw error;
+    } finally {
+      setEvolvPointsLoading(false);
+    }
+  };
+
+  const removeEvolvPoints = () => {
+    setEvolvPointsRedemption(null);
+    setEvolvPointsError(null);
+    fetchUserEvolvPoints(); // Refresh user points
   };
 
   return (
     <CartContext.Provider
-      value={{ cartItems, addToCart, updateQuantity, removeItem, clearCart, isLoading }}
+      value={{
+        cartItems,
+        addToCart,
+        updateQuantity,
+        removeItem,
+        clearCart,
+        isLoading,
+        promoCode,
+        applyPromoCode,
+        removePromoCode,
+        promoCodeLoading,
+        promoCodeError,
+        evolvPointsRedemption,
+        applyEvolvPoints,
+        removeEvolvPoints,
+        evolvPointsLoading,
+        evolvPointsError,
+        userEvolvPoints,
+        fetchUserEvolvPoints
+      }}
     >
       {children}
     </CartContext.Provider>

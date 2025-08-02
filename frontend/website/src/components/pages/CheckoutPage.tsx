@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Check, Lock, Shield, Truck, CreditCard, MapPin, User, Mail, Phone, Download, Gift } from 'lucide-react';
 
 const CheckoutPage: React.FC = () => {
-  const { cartItems, clearCart, isLoading } = useCartContext();
+  const { cartItems, clearCart, isLoading, promoCode, evolvPointsRedemption } = useCartContext();
   const { token, user } = useAuth();
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
 
@@ -35,7 +35,7 @@ const CheckoutPage: React.FC = () => {
 
       try {
         setLoadingProfile(true);
-        const response = await fetch('https://vitals-iu4r.onrender.com/api/auth/me', {
+        const response = await fetch('http://localhost:3500/api/auth/me', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -95,7 +95,10 @@ const CheckoutPage: React.FC = () => {
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const shippingCost = subtotal > 1000 ? 0 : 50;
   const tax = subtotal * 0.08;
-  const total = subtotal + shippingCost + tax;
+  const promoDiscountAmount = promoCode?.discountAmount || 0;
+  const evolvDiscountAmount = evolvPointsRedemption?.discountAmount || 0;
+  const totalDiscountAmount = promoDiscountAmount + evolvDiscountAmount;
+  const total = Math.max(0, subtotal + shippingCost + tax - totalDiscountAmount);
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>, type: 'shipping' | 'billing') => {
     const { name, value } = e.target;
@@ -148,14 +151,33 @@ const CheckoutPage: React.FC = () => {
       subtotal: subtotal,
       shippingCost: shippingCost,
       tax: tax,
-      total: total
+      total: total,
+      ...(promoCode?.code && { promoCode: promoCode.code }),
+      evolvPointsToRedeem: evolvPointsRedemption?.pointsToRedeem || 0
     };
 
     console.log('Complete order payload:', JSON.stringify(payload, null, 2));
+    console.log('Promo code from context:', promoCode);
+    console.log('Evolv points redemption from context:', evolvPointsRedemption);
+    console.log('Cart items:', cartItems);
+    console.log('Individual item analysis:');
+    cartItems.forEach((item, index) => {
+      console.log(`Item ${index}:`, {
+        id: item.id,
+        idType: typeof item.id,
+        idLength: item.id?.length,
+        quantity: item.quantity,
+        quantityType: typeof item.quantity,
+        price: item.price,
+        priceType: typeof item.price,
+        packSize: item.packSize,
+        packSizeType: typeof item.packSize
+      });
+    });
 
     // In handleSubmit function of CheckoutPage.tsx
     try {
-      const res = await fetch('https://vitals-iu4r.onrender.com/api/customer/orders', {
+      const res = await fetch('http://localhost:3500/api/customer/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -168,7 +190,18 @@ const CheckoutPage: React.FC = () => {
       const data = await res.json();
       console.log('Order response:', data);
 
-      if (!res.ok) throw new Error(data.message || 'Order failed');
+      if (!res.ok) {
+        console.error('Order validation failed:', data);
+        console.error('Validation errors:', data.errors);
+        if (data.errors && data.errors.length > 0) {
+          console.error('First validation error:', data.errors[0]);
+          setError(`Validation error: ${data.errors[0].msg} (Field: ${data.errors[0].path})`);
+        } else {
+          setError(data.message || 'Order failed');
+        }
+        setLoading(false);
+        return;
+      }
 
       setSuccess(true);
       setOrderData(data.data); // Changed from data to data.data
@@ -633,6 +666,21 @@ const CheckoutPage: React.FC = () => {
                   <span>Subtotal</span>
                   <span>₹{subtotal.toFixed(0)}</span>
                 </div>
+                
+                {promoCode && promoDiscountAmount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Discount ({promoCode.code})</span>
+                    <span>-₹{promoDiscountAmount.toFixed(0)}</span>
+                  </div>
+                )}
+
+                {evolvPointsRedemption && evolvDiscountAmount > 0 && (
+                  <div className="flex justify-between text-blue-600">
+                    <span>Evolv Points ({evolvPointsRedemption.pointsToRedeem} pts)</span>
+                    <span>-₹{evolvDiscountAmount.toFixed(0)}</span>
+                  </div>
+                )}
+                
                 <div className="flex justify-between text-gray-600">
                   <span>Shipping</span>
                   <span>{shippingCost === 0 ? 'Free' : `₹${shippingCost}`}</span>

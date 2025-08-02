@@ -28,6 +28,18 @@ const userSchema = new mongoose.Schema({
     minlength: [6, 'Password must be at least 6 characters'],
     select: false
   },
+  isEmailVerified: {
+    type: Boolean,
+    default: false
+  },
+  emailVerificationToken: {
+    type: String,
+    select: false
+  },
+  emailVerificationExpires: {
+    type: Date,
+    select: false
+  },
   role: {
     type: String,
     enum: ['admin', 'customer'],
@@ -161,14 +173,14 @@ userSchema.methods.getNextLoyaltyTier = function() {
     };
   }
 };
-userSchema.methods.addLoyaltyPoints = async function(orderTotal, order) {
+userSchema.methods.addLoyaltyPoints = async function(orderTotal, order, skipEvolvPoints = false) {
   // Calculate points based on current tier
   let multiplier = 0.10; // bronze
   if (this.loyaltyTier === 'silver') multiplier = 0.15;
   if (this.loyaltyTier === 'gold') multiplier = 0.20;
 
-  const evolvPoints = Math.floor(orderTotal * multiplier);
-  const tierPoints = Math.floor(orderTotal); // 1:1 ratio for tier points
+  const evolvPoints = skipEvolvPoints ? 0 : Math.floor(orderTotal * multiplier);
+  const tierPoints = Math.floor(orderTotal); // 1:1 ratio for tier points (always awarded)
 
   // Update points
   this.evolvPoints += evolvPoints;
@@ -181,17 +193,6 @@ userSchema.methods.addLoyaltyPoints = async function(orderTotal, order) {
     this.loyaltyTier = 'gold';
   }
 
-  // Add to history
-  this.loyaltyHistory.push({
-    date: new Date(),
-    action: 'order_points',
-    points: tierPoints,
-    order: order ? order._id : null, // Handle case where order might be undefined
-    description: `Earned ${tierPoints} tier points and ${evolvPoints} evolv points from order`
-  });
-
-  await this.save();
-
   return {
     tierPoints,
     evolvPoints,
@@ -199,6 +200,62 @@ userSchema.methods.addLoyaltyPoints = async function(orderTotal, order) {
     totalPoints: this.loyaltyPoints,
     totalEvolvPoints: this.evolvPoints
   };
+};
+
+// Method to redeem Evolv points
+userSchema.methods.redeemEvolvPoints = function(pointsToRedeem, orderTotal) {
+  if (pointsToRedeem <= 0) {
+    throw new Error('Points to redeem must be greater than 0');
+  }
+  
+  if (pointsToRedeem > this.evolvPoints) {
+    throw new Error(`Insufficient Evolv points. Available: ${this.evolvPoints}, Requested: ${pointsToRedeem}`);
+  }
+  
+  // Calculate discount amount (1 Evolv point = ₹1 discount)
+  const discountAmount = Math.min(pointsToRedeem, orderTotal);
+  const actualPointsUsed = discountAmount; // Only use points up to order total
+  
+  this.evolvPoints -= actualPointsUsed;
+  
+  // Add to loyalty history
+  this.loyaltyHistory.push({
+    date: new Date(),
+    action: 'evolv_redemption',
+    points: -actualPointsUsed,
+    description: `Redeemed ${actualPointsUsed} Evolv points for ₹${discountAmount} discount`
+  });
+  
+  return {
+    pointsUsed: actualPointsUsed,
+    discountAmount,
+    remainingPoints: this.evolvPoints
+  };
+};
+
+// Method to check if user can redeem points
+userSchema.methods.canRedeemEvolvPoints = function(pointsToRedeem) {
+  return pointsToRedeem > 0 && pointsToRedeem <= this.evolvPoints;
+};
+
+// Method to generate email verification token
+userSchema.methods.generateEmailVerificationToken = function() {
+  const crypto = require('crypto');
+  
+  // Generate token
+  const verificationToken = crypto.randomBytes(32).toString('hex');
+  
+  // Set token and expiration (24 hours)
+  this.emailVerificationToken = verificationToken;
+  this.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+  
+  return verificationToken;
+};
+
+// Method to verify email token
+userSchema.methods.verifyEmailToken = function(token) {
+  return this.emailVerificationToken === token && 
+         this.emailVerificationExpires > Date.now();
 };
 
 module.exports = mongoose.model('User', userSchema); 

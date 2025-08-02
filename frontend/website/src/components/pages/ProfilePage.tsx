@@ -46,7 +46,6 @@ const ProfilePage: React.FC = () => {
   });
   const [saving, setSaving] = useState(false);
   const [orderStats, setOrderStats] = useState<any>(null);
-  const [totalSpent, setTotalSpent] = useState(0);
 
   useEffect(() => {
     if (!user) {
@@ -86,8 +85,7 @@ const ProfilePage: React.FC = () => {
 
     setSaving(true);
     try {
-      // Change this endpoint to match the backend route
-      const response = await fetch('https://vitals-iu4r.onrender.com/api/customer/profile', {
+      const response = await fetch('http://localhost:3500/api/customer/profile', {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -97,13 +95,12 @@ const ProfilePage: React.FC = () => {
           firstName: editForm.firstName,
           lastName: editForm.lastName,
           phone: editForm.phone,
-          address: editForm.address  // Make sure address is included
+          address: editForm.address  
         }),
       });
 
       if (response.ok) {
         setShowEditModal(false);
-        // Refresh the page to get updated user data
         window.location.reload();
       } else {
         const data = await response.json();
@@ -117,7 +114,6 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  // If no user, show loading or redirect
   if (!user) {
     return null;
   }
@@ -147,9 +143,61 @@ const ProfilePage: React.FC = () => {
     nextTierPoints: user.loyaltyTier === 'bronze' ? 5000 : user.loyaltyTier === 'silver' ? 10000 : 0
   };
   const tiers = [
-    { name: "Bronze", minPoints: 0, maxPoints: 4999, color: "#CD7F32", icon: Star },
-    { name: "Silver", minPoints: 5000, maxPoints: 9999, color: "#C0C0C0", icon: Award },
-    { name: "Gold", minPoints: 10000, maxPoints: 999999, color: "#FFD700", icon: Crown }
+    { 
+      name: "Bronze", 
+      minPoints: 0, 
+      maxPoints: 4999, 
+      color: "#CD7F32",
+      bgColor: "bg-amber-50",
+      borderColor: "border-amber-300",
+      textColor: "text-amber-800",
+      iconColor: "text-amber-600",
+      icon: Star,
+      benefits: [
+        "1% Evolv Points on every purchase",
+        "Welcome bonus: 100 points",
+        "Standard shipping rates",
+        "Basic customer support"
+      ]
+    },
+    { 
+      name: "Silver", 
+      minPoints: 5000, 
+      maxPoints: 9999, 
+      color: "#C0C0C0",
+      bgColor: "bg-gray-50",
+      borderColor: "border-gray-300",
+      textColor: "text-gray-800",
+      iconColor: "text-gray-600",
+      icon: Award,
+      benefits: [
+        "2% Evolv Points on every purchase",
+        "Priority customer support",
+        "Free shipping on orders ₹500+",
+        "Early access to new products",
+        "Birthday bonus: 500 points"
+      ]
+    },
+    { 
+      name: "Gold", 
+      minPoints: 10000, 
+      maxPoints: 999999, 
+      color: "#FFD700",
+      bgColor: "bg-yellow-50",
+      borderColor: "border-yellow-300",
+      textColor: "text-yellow-800",
+      iconColor: "text-yellow-600",
+      icon: Crown,
+      benefits: [
+        "3% Evolv Points on every purchase",
+        "VIP customer support",
+        "Free shipping on all orders",
+        "Exclusive product launches",
+        "Birthday bonus: 1000 points",
+        "Monthly surprise gifts",
+        "Personal nutrition consultant"
+      ]
+    }
   ];
   useEffect(() => {
     if (activeTab === 'orders' && user && token) {
@@ -157,7 +205,7 @@ const ProfilePage: React.FC = () => {
         setOrdersLoading(true);
         setOrdersError('');
         try {
-          const response = await fetch('https://vitals-iu4r.onrender.com/api/customer/orders', {
+          const response = await fetch('http://localhost:3500/api/customer/orders', {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json',
@@ -180,7 +228,7 @@ const ProfilePage: React.FC = () => {
     if (user && token) {
       const fetchDashboardData = async () => {
         try {
-          const response = await fetch('https://vitals-iu4r.onrender.com/api/customer/dashboard', {
+          const response = await fetch('http://localhost:3500/api/customer/dashboard', {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           
@@ -188,7 +236,6 @@ const ProfilePage: React.FC = () => {
           
           if (response.ok) {
             setOrderStats(data.data.orderStats);
-            setTotalSpent(data.data.orderStats?.totalSpent || 0);
           }
         } catch (error) {
           console.error('Error fetching dashboard data:', error);
@@ -275,27 +322,56 @@ const ProfilePage: React.FC = () => {
             </div>
           </div>
 
-          { }
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          {/* Tier Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {tiers.map((tier) => {
               const Icon = tier.icon;
-              const isCurrentTier = tier.name === userData.currentTier;
-              const isUnlocked = userData.evolvPoints >= tier.minPoints;
+              const isCurrentTier = tier.name.toLowerCase() === userData.currentTier;
+              const isUnlocked = userData.loyaltyPoints >= tier.minPoints;
 
               return (
                 <div
                   key={tier.name}
-                  className={`p-4 rounded-lg border-2 text-center transition-all ${isCurrentTier
-                    ? 'border-[#FFD700] bg-[#FFD700]/10'
-                    : isUnlocked
-                      ? 'border-gray-300 bg-gray-50'
-                      : 'border-gray-200 bg-gray-100 opacity-50'
-                    }`}
+                  className={`p-6 rounded-xl border-2 transition-all transform hover:scale-105 ${
+                    isCurrentTier
+                      ? `${tier.borderColor} ${tier.bgColor} ring-2 ring-offset-2 ring-opacity-50`
+                      : isUnlocked
+                        ? `${tier.borderColor} ${tier.bgColor} opacity-90`
+                        : 'border-gray-200 bg-gray-50 opacity-60'
+                  }`}
                 >
-                  <Icon className={`w-8 h-8 mx-auto mb-2 ${isCurrentTier ? 'text-[#FFD700]' : 'text-gray-400'
-                    }`} />
-                  <h4 className="font-semibold text-sm">{tier.name}</h4>
-                  <p className="text-xs text-gray-600">{tier.minPoints}+ pts</p>
+                  <div className="text-center mb-4">
+                    <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full ${tier.bgColor} border-2 ${tier.borderColor} mb-3`}>
+                      <Icon className={`w-8 h-8 ${isCurrentTier ? tier.iconColor : 'text-gray-400'}`} />
+                    </div>
+                    <h4 className={`font-bold text-lg ${isCurrentTier ? tier.textColor : 'text-gray-600'}`}>
+                      {tier.name}
+                    </h4>
+                    <p className="text-sm text-gray-500">
+                      {tier.minPoints === 0 ? '0' : tier.minPoints.toLocaleString()}+ points
+                    </p>
+                    {isCurrentTier && (
+                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold mt-2 ${tier.bgColor} ${tier.textColor}`}>
+                        Current Tier
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h5 className={`font-semibold text-sm ${isCurrentTier ? tier.textColor : 'text-gray-700'}`}>
+                      Benefits:
+                    </h5>
+                    <ul className="space-y-1">
+                      {tier.benefits.map((benefit, index) => (
+                        <li key={index} className="flex items-start space-x-2 text-xs">
+                          <div className={`w-1.5 h-1.5 rounded-full mt-1.5 ${isCurrentTier ? tier.iconColor.replace('text-', 'bg-') : 'bg-gray-300'}`}></div>
+                          <span className={`${isCurrentTier ? 'text-gray-700' : 'text-gray-500'}`}>
+                            {benefit}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
               );
             })}

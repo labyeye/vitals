@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'https://vitals-iu4r.onrender.com/api/products';
+const API_URL = 'http://localhost:3500/api/products';
 
 export interface Product {
   _id: string;
@@ -17,7 +17,12 @@ export interface Product {
 // Update the getProducts function
 export const getProducts = async (): Promise<Product[]> => {
   try {
-    const response = await axios.get(API_URL);
+    const response = await axios.get(API_URL, {
+      timeout: 10000, // 10 second timeout
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
     
     if (!response.data?.data?.products) {
       throw new Error('Invalid API response structure');
@@ -59,6 +64,18 @@ export const getProducts = async (): Promise<Product[]> => {
     });
   } catch (error) {
     console.error('Error fetching products:', error);
+    
+    // Handle specific error types
+    if (axios.isAxiosError(error)) {
+      if (error.response?.status === 429) {
+        throw new Error('Too many requests. Please wait a moment and try again.');
+      } else if (error.response && error.response.status >= 500) {
+        throw new Error('Server error. Please try again later.');
+      } else if (error.code === 'ECONNREFUSED' || error.code === 'ERR_NETWORK') {
+        throw new Error('Cannot connect to server. Please check if the backend is running.');
+      }
+    }
+    
     throw error;
   }
 };
