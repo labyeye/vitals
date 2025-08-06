@@ -14,6 +14,8 @@ import BlogsPage from "./components/pages/BlogsPage";
 import ProfilePage from "./components/pages/ProfilePage";
 import Login from "./components/auth/Login";
 import Register from "./components/auth/Register";
+import ForgotPassword from "./components/auth/ForgotPassword";
+import ResetPassword from "./components/auth/ResetPassword";
 import ProductDetailsPage from "./components/pages/ProductDetailsPage";
 import OrderDetailPage from "./components/pages/OrderDetailPage";
 import Dashboard from "./components/pages/Dashboard";
@@ -38,6 +40,8 @@ function App() {
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/verify-email" element={<VerifyEmailPage />} />
               <Route path="/order/:id" element={<OrderDetailPage />} />
               <Route path="/dashboard" element={<Dashboard />} />

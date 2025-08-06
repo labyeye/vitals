@@ -102,7 +102,7 @@ items: [{
   payment: {
     method: {
       type: String,
-      enum: ['credit_card', 'debit_card', 'paypal', 'stripe', 'cash_on_delivery'],
+      enum: ['credit_card', 'debit_card', 'paypal', 'stripe', 'razorpay', 'cash_on_delivery'],
       required: true
     },
     status: {
@@ -111,6 +111,9 @@ items: [{
       default: 'pending'
     },
     transactionId: String,
+    razorpayOrderId: String,
+    razorpayPaymentId: String,
+    razorpaySignature: String,
     paidAt: Date
   },
   shippingAddress: {

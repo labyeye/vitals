@@ -3,6 +3,7 @@ import { useCartContext } from '../../context/CartContext';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Check, Lock, Shield, Truck, CreditCard, MapPin, User, Mail, Phone, Download, Gift } from 'lucide-react';
+import { paymentService } from '../../services/paymentService';
 
 const CheckoutPage: React.FC = () => {
   const { cartItems, clearCart, isLoading, promoCode, evolvPointsRedemption } = useCartContext();
@@ -17,7 +18,7 @@ const CheckoutPage: React.FC = () => {
     firstName: '', lastName: '', email: '', phone: '',
     street: '', city: '', state: '', zipCode: '', country: 'India'
   });
-  const [paymentMethod, setPaymentMethod] = useState('cash_on_delivery');
+  const [paymentMethod, setPaymentMethod] = useState('razorpay');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -140,7 +141,7 @@ const CheckoutPage: React.FC = () => {
         quantity: item.quantity,
         price: item.price,
         packSize: item.packSize,
-        itemTotal: item.price * item.quantity // Add item total for verification
+        itemTotal: item.price * item.quantity
       })),
       shippingAddress: shipping,
       billingAddress: useSameAddress ? shipping : billing,
@@ -157,26 +158,9 @@ const CheckoutPage: React.FC = () => {
     };
 
     console.log('Complete order payload:', JSON.stringify(payload, null, 2));
-    console.log('Promo code from context:', promoCode);
-    console.log('Evolv points redemption from context:', evolvPointsRedemption);
-    console.log('Cart items:', cartItems);
-    console.log('Individual item analysis:');
-    cartItems.forEach((item, index) => {
-      console.log(`Item ${index}:`, {
-        id: item.id,
-        idType: typeof item.id,
-        idLength: item.id?.length,
-        quantity: item.quantity,
-        quantityType: typeof item.quantity,
-        price: item.price,
-        priceType: typeof item.price,
-        packSize: item.packSize,
-        packSizeType: typeof item.packSize
-      });
-    });
 
-    // In handleSubmit function of CheckoutPage.tsx
     try {
+      // Create order first
       const res = await fetch('http://localhost:3500/api/customer/orders', {
         method: 'POST',
         headers: {
@@ -192,9 +176,7 @@ const CheckoutPage: React.FC = () => {
 
       if (!res.ok) {
         console.error('Order validation failed:', data);
-        console.error('Validation errors:', data.errors);
         if (data.errors && data.errors.length > 0) {
-          console.error('First validation error:', data.errors[0]);
           setError(`Validation error: ${data.errors[0].msg} (Field: ${data.errors[0].path})`);
         } else {
           setError(data.message || 'Order failed');
@@ -203,14 +185,49 @@ const CheckoutPage: React.FC = () => {
         return;
       }
 
-      setSuccess(true);
-      setOrderData(data.data); // Changed from data to data.data
-      clearCart();
-      navigate(`/profile`); // Redirect to profile instead of order page
+      const orderData = data.data;
+      console.log('Order created successfully:', orderData);
+
+      // Handle payment based on method
+      if (paymentMethod === 'razorpay') {
+        // Integrate Razorpay payment
+        try {
+          await paymentService.initiatePayment(
+            orderData.order._id,
+            token,
+            (paymentResponse) => {
+              // Payment successful
+              console.log('Payment successful:', paymentResponse);
+              setSuccess(true);
+              setOrderData(paymentResponse.data);
+              clearCart();
+              setLoading(false);
+              navigate('/profile');
+            },
+            (error) => {
+              // Payment failed
+              console.error('Payment failed:', error);
+              setError(`Payment failed: ${error}`);
+              setLoading(false);
+            }
+          );
+        } catch (paymentError) {
+          console.error('Payment initiation error:', paymentError);
+          setError('Failed to initiate payment. Please try again.');
+          setLoading(false);
+        }
+      } else {
+        // For cash on delivery, order is complete
+        setSuccess(true);
+        setOrderData(orderData);
+        clearCart();
+        setLoading(false);
+        navigate('/profile');
+      }
+
     } catch (err: any) {
       console.error('Order error:', err);
       setError(err.message || 'Failed to place order');
-    } finally {
       setLoading(false);
     }
   };
@@ -607,11 +624,32 @@ const CheckoutPage: React.FC = () => {
                     className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#688F4E] focus:border-transparent"
                   >
                     <option value="cash_on_delivery">Cash on Delivery</option>
-                    <option value="credit_card">Credit Card</option>
-                    <option value="debit_card">Debit Card</option>
-                    <option value="paypal">PayPal</option>
-                    <option value="stripe">Stripe</option>
+                    <option value="razorpay">Pay Online (Razorpay)</option>
                   </select>
+                  
+                  {paymentMethod === 'razorpay' && (
+                    <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-center mb-2">
+                        <Shield className="w-5 h-5 text-blue-600 mr-2" />
+                        <span className="text-sm font-medium text-blue-800">Secure Online Payment</span>
+                      </div>
+                      <p className="text-sm text-blue-700">
+                        Pay securely using Credit Card, Debit Card, UPI, Net Banking, or Wallets through Razorpay.
+                      </p>
+                    </div>
+                  )}
+                  
+                  {paymentMethod === 'cash_on_delivery' && (
+                    <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <div className="flex items-center mb-2">
+                        <Truck className="w-5 h-5 text-yellow-600 mr-2" />
+                        <span className="text-sm font-medium text-yellow-800">Cash on Delivery</span>
+                      </div>
+                      <p className="text-sm text-yellow-700">
+                        Pay cash when your order is delivered to your doorstep.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {error && (
@@ -628,12 +666,16 @@ const CheckoutPage: React.FC = () => {
                   {loading ? (
                     <>
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      <span>Placing Order...</span>
+                      <span>
+                        {paymentMethod === 'razorpay' ? 'Processing Payment...' : 'Placing Order...'}
+                      </span>
                     </>
                   ) : (
                     <>
                       <Lock className="w-5 h-5" />
-                      <span>Place Order Securely</span>
+                      <span>
+                        {paymentMethod === 'razorpay' ? `Pay ₹${total.toFixed(2)}` : 'Place Order Securely'}
+                      </span>
                     </>
                   )}
                 </button>

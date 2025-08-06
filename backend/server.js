@@ -10,6 +10,8 @@ const adminRoutes = require('./routes/admin');
 const customerRoutes = require('./routes/customer');
 const productRoutes = require('./routes/products');
 const orderRoutes = require('./routes/orders');
+const heroRoutes = require('./routes/heroes');
+const paymentRoutes = require('./routes/payments');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -41,7 +43,7 @@ app.use(cors({
       'https://vitals-theta.vercel.app'
     ],
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'],
     allowedHeaders: [
       'Accept',
       'Accept-Language',
@@ -49,14 +51,61 @@ app.use(cors({
       'Authorization',
       'X-Requested-With',
       'X-CSRF-Token',
-      'x-auth-token'
+      'x-auth-token',
+      'Origin',
+      'Cache-Control',
+      'Pragma'
     ],
-    exposedHeaders: ['Set-Cookie', 'Date', 'ETag']
+    exposedHeaders: ['Set-Cookie', 'Date', 'ETag', 'Content-Type'],
+    optionsSuccessStatus: 200 // Some legacy browsers choke on 204
   }));
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Static file serving for uploads with enhanced CORS headers
+app.use('/uploads', (req, res, next) => {
+  // Set CORS headers for static files
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Cross-Origin-Resource-Policy', 'cross-origin');
+  
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
+
+app.use('/uploads', express.static('uploads', {
+  setHeaders: (res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
+
+// Static file serving for uploads with CORS headers
+app.use('/uploads', (req, res, next) => {
+  // Set CORS headers for static files
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
+
+app.use('/uploads', express.static('uploads', {
+  setHeaders: (res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
 
 // Database connection
 mongoose.connect(process.env.MONGODB_URI,{
@@ -68,6 +117,7 @@ mongoose.connect(process.env.MONGODB_URI,{
   require('./models/User'); // Make sure you have this file
   require('./models/Category');
   require('./models/Product');
+  require('./models/Hero');
 })
 .catch(err => console.error('MongoDB connection error:', err));
 
@@ -76,6 +126,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/customer', customerRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/heroes', heroRoutes);
+app.use('/api/payments', paymentRoutes);
 
 app.get('/api/health', (req, res) => {
   console.log('Health check request received from:', req.headers.origin);

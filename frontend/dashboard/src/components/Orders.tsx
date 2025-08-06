@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Search, Filter, Download, Package, Truck, CheckCircle } from 'lucide-react';
+import { Search, Filter, Download, Package, Truck, CheckCircle, CreditCard, DollarSign } from 'lucide-react';
 
 interface OrdersProps {
   onViewDetails: (orderId: string) => void;
@@ -218,6 +218,7 @@ const Orders: React.FC<OrdersProps> = ({ onViewDetails }) => {
                   <th className="px-4 py-2 text-left font-semibold">Date</th>
                   <th className="px-4 py-2 text-left font-semibold">Items</th>
                   <th className="px-4 py-2 text-left font-semibold">Total</th>
+                  <th className="px-4 py-2 text-left font-semibold">Payment</th>
                   <th className="px-4 py-2 text-left font-semibold">Status</th>
                   <th className="px-4 py-2 text-left font-semibold">Actions</th>
               </tr>
@@ -225,13 +226,47 @@ const Orders: React.FC<OrdersProps> = ({ onViewDetails }) => {
             <tbody className="bg-white divide-y divide-gray-200">
                 {orders.map((order) => {
                 const StatusIcon = getStatusIcon(order.status);
+                
+                const getPaymentStatusColor = (status: string) => {
+                  switch (status) {
+                    case 'paid': return 'bg-green-100 text-green-800';
+                    case 'pending': return 'bg-yellow-100 text-yellow-800';
+                    case 'failed': return 'bg-red-100 text-red-800';
+                    case 'refunded': return 'bg-gray-100 text-gray-800';
+                    default: return 'bg-gray-100 text-gray-800';
+                  }
+                };
+
+                const getPaymentMethodDisplay = (method: string) => {
+                  switch (method) {
+                    case 'razorpay': return 'Online';
+                    case 'cash_on_delivery': return 'COD';
+                    default: return method.replace('_', ' ').toUpperCase();
+                  }
+                };
+
                 return (
                     <tr key={order._id} className="hover:bg-gray-50">
                       <td className="px-4 py-2 font-medium">{order.orderNumber}</td>
                       <td className="px-4 py-2">{order.customer ? `${order.customer.firstName} ${order.customer.lastName}` : '-'}</td>
                       <td className="px-4 py-2">{new Date(order.createdAt).toLocaleDateString()}</td>
                       <td className="px-4 py-2">{order.items.map((item: any) => item.product?.name).join(', ')}</td>
-                      <td className="px-4 py-2 font-medium">${order.total.toFixed(2)}</td>
+                      <td className="px-4 py-2 font-medium">₹{order.total.toFixed(2)}</td>
+                      <td className="px-4 py-2">
+                        <div className="space-y-1">
+                          <div className="text-xs">
+                            <span className="font-medium">{getPaymentMethodDisplay(order.payment?.method || 'N/A')}</span>
+                          </div>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getPaymentStatusColor(order.payment?.status || 'pending')}`}>
+                            {order.payment?.status || 'pending'}
+                          </span>
+                          {order.payment?.razorpayPaymentId && (
+                            <div className="text-xs text-gray-500">
+                              ID: {order.payment.razorpayPaymentId.substring(0, 12)}...
+                            </div>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-4 py-2">
                       <div className="flex items-center space-x-2">
                         <StatusIcon className="w-4 h-4 text-gray-400" />
@@ -240,13 +275,18 @@ const Orders: React.FC<OrdersProps> = ({ onViewDetails }) => {
                     </td>
                       <td className="px-4 py-2">
                         <button onClick={() => onViewDetails(order._id)} className="text-blue-600 hover:text-blue-900 mr-3">View</button>
-                        {order.status === 'pending' && order.payment?.method !== 'cash_on_delivery' && (
+                        {order.status === 'pending' && order.payment?.method === 'cash_on_delivery' && (
                       <button 
                             className="ml-2 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
                             onClick={() => handleConfirmPayment(order._id)}
                       >
-                            Confirm Payment
+                            Confirm COD
                       </button>
+                        )}
+                        {order.payment?.status === 'paid' && order.status === 'pending' && (
+                          <span className="ml-2 px-3 py-1 bg-blue-100 text-blue-800 rounded text-sm">
+                            Payment Verified
+                          </span>
                         )}
                         <select
                           className="ml-2 px-2 py-1 border rounded"

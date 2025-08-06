@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import ProfileImageUpload from "../ProfileImageUpload";
 import {
   User,
   Package,
@@ -21,7 +22,8 @@ import {
   Eye,
   Edit,
   X,
-  Save
+  Save,
+  Camera
 } from "lucide-react";
 
 const ProfilePage: React.FC = () => {
@@ -46,6 +48,8 @@ const ProfilePage: React.FC = () => {
   });
   const [saving, setSaving] = useState(false);
   const [orderStats, setOrderStats] = useState<any>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [showImageUpload, setShowImageUpload] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -114,6 +118,40 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+    const handleImageUpload = async (file: File) => {
+    if (!token) return;
+
+    setUploadingImage(true);
+    const formData = new FormData();
+    formData.append('profileImage', file);
+
+    try {
+      const response = await fetch('http://localhost:3500/api/auth/upload-profile-image', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Show success message
+        alert('Profile picture updated successfully!');
+        // Reload to get updated user data
+        window.location.reload();
+      } else {
+        alert('Error uploading image: ' + (data.message || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Error uploading image. Please try again.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   if (!user) {
     return null;
   }
@@ -130,7 +168,9 @@ const ProfilePage: React.FC = () => {
       month: 'long', 
       year: 'numeric' 
     }),
-    avatar: user.avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80",
+    avatar: user.profileImage 
+      ? `http://localhost:3500${user.profileImage}?t=${Date.now()}` // Direct static file serving
+      : "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80",
     totalOrders: orderStats?.total || 0,
     totalSpent: orderStats?.totalSpent || 0,
     loyaltyPoints: user.loyaltyPoints || 0,
@@ -258,12 +298,28 @@ const ProfilePage: React.FC = () => {
                 alt={userData.name}
                 className="w-24 h-24 rounded-full object-cover border-4 border-[#688F4E]"
               />
-              <button
-                onClick={handleEditProfile}
-                className="absolute -bottom-2 -right-2 bg-[#688F4E] text-white p-2 rounded-full hover:bg-[#5a7a42] transition-colors"
-              >
-                <Edit className="w-4 h-4" />
-              </button>
+              {/* Profile picture upload button */}
+              <div className="absolute -bottom-2 -right-2 flex gap-1">
+                <button
+                  onClick={() => setShowImageUpload(true)}
+                  className="bg-[#688F4E] text-white p-2 rounded-full hover:bg-[#5a7a42] transition-colors"
+                  title="Upload profile picture"
+                  disabled={uploadingImage}
+                >
+                  {uploadingImage ? (
+                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                  ) : (
+                    <Camera className="w-4 h-4" />
+                  )}
+                </button>
+                <button
+                  onClick={handleEditProfile}
+                  className="bg-[#688F4E] text-white p-2 rounded-full hover:bg-[#5a7a42] transition-colors"
+                  title="Edit profile"
+                >
+                  <Edit className="w-4 h-4" />
+                </button>
+              </div>
             </div>
             <div className="flex-1 text-center md:text-left">
               <h1 className="text-3xl font-bold text-[#2B463C] mb-2">{userData.name}</h1>
@@ -735,6 +791,15 @@ const ProfilePage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Profile Image Upload Modal */}
+      <ProfileImageUpload
+        isOpen={showImageUpload}
+        onClose={() => setShowImageUpload(false)}
+        currentImage={userData.avatar}
+        onUpload={handleImageUpload}
+        uploading={uploadingImage}
+      />
     </div>
   );
 };

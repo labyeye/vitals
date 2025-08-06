@@ -819,7 +819,7 @@ router.post('/orders', [
     .isObject()
     .withMessage('Billing address must be an object if provided'),
   body('payment.method')
-    .isIn(['credit_card', 'debit_card', 'paypal', 'stripe', 'cash_on_delivery'])
+    .isIn(['credit_card', 'debit_card', 'paypal', 'stripe', 'razorpay', 'cash_on_delivery'])
     .withMessage('Valid payment method is required'),
   body('subtotal')
     .isNumeric()
