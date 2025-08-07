@@ -45,9 +45,9 @@ const sendVerificationEmail = async (email, firstName, verificationToken) => {
     const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${verificationToken}`;
     
     const mailOptions = {
-      from: `"Evolv Team" <${process.env.EMAIL_FROM || 'noreply@evolv.com'}>`,
+      from: `"Thryv Team" <${process.env.EMAIL_FROM || 'noreply@thryv.com'}>`,
       to: email,
-      subject: 'Verify Your Email Address - Evolv',
+      subject: 'Verify Your Email Address - Thryv',
       html: `
         <!DOCTYPE html>
         <html lang="en">
@@ -118,13 +118,13 @@ const sendVerificationEmail = async (email, firstName, verificationToken) => {
             <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
             <p style="word-break: break-all; color: #688F4E;">${verificationUrl}</p>
             
-            <p>If you didn't create an account with Evolv, you can safely ignore this email.</p>
+            <p>If you didn't create an account with Thryv, you can safely ignore this email.</p>
             
-            <p>Best regards,<br>The Evolv Team</p>
+            <p>Best regards,<br>The Thryv Team</p>
           </div>
           
           <div class="footer">
-            <p>&copy; 2025 Evolv. All rights reserved.</p>
+            <p>&copy; 2025 Thryv. All rights reserved.</p>
             <p>This is an automated email, please do not reply.</p>
           </div>
         </body>
@@ -133,17 +133,17 @@ const sendVerificationEmail = async (email, firstName, verificationToken) => {
       text: `
         Hi ${firstName}!
         
-        Welcome to Evolv! We're excited to have you as part of our community.
+        Welcome to Thryv! We're excited to have you as part of our community.
         
         To complete your registration, please verify your email address by visiting this link:
         ${verificationUrl}
         
         This verification link will expire in 24 hours for security reasons.
         
-        If you didn't create an account with Evolv, you can safely ignore this email.
+        If you didn't create an account with Thryv, you can safely ignore this email.
         
         Best regards,
-        The Evolv Team
+        The Thryv Team
       `
     };
 
@@ -179,16 +179,16 @@ const sendWelcomeEmail = async (email, firstName) => {
     const transporter = createTransporter();
     
     const mailOptions = {
-      from: `"Evolv Team" <${process.env.EMAIL_FROM || 'noreply@evolv.com'}>`,
+      from: `"Thryv Team" <${process.env.EMAIL_FROM || 'noreply@thryv.com'}>`,
       to: email,
-      subject: '🎉 Welcome to Evolv - Your Journey Begins Now!',
+      subject: '🎉 Welcome to Thryv - Your Journey Begins Now!',
       html: `
         <!DOCTYPE html>
         <html lang="en">
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Welcome to Evolv</title>
+          <title>Welcome to Thryv</title>
           <style>
             body {
               font-family: Arial, sans-serif;
@@ -231,14 +231,14 @@ const sendWelcomeEmail = async (email, firstName) => {
         </head>
         <body>
           <div class="header">
-            <h1>🎉 Welcome to Evolv!</h1>
+            <h1>🎉 Welcome to Thryv!</h1>
             <p>Your email has been verified successfully</p>
           </div>
           
           <div class="content">
             <h2>Hi ${firstName}!</h2>
             
-            <p>Congratulations! Your email has been verified and your Evolv account is now active.</p>
+            <p>Congratulations! Your email has been verified and your Thryv account is now active.</p>
             
             <div class="feature">
               <h3>🏋️ Premium Protein Products</h3>
@@ -246,7 +246,7 @@ const sendWelcomeEmail = async (email, firstName) => {
             </div>
             
             <div class="feature">
-              <h3>⚡ Evolv Points Rewards</h3>
+              <h3>⚡ Thryv Points Rewards</h3>
               <p>Earn points with every purchase and redeem them for discounts on future orders.</p>
             </div>
             
@@ -261,7 +261,7 @@ const sendWelcomeEmail = async (email, firstName) => {
             
             <p>Ready to power up your fitness journey? Browse our products and make your first order!</p>
             
-            <p>Best regards,<br>The Evolv Team</p>
+            <p>Best regards,<br>The Thryv Team</p>
           </div>
         </body>
         </html>
@@ -291,9 +291,9 @@ const sendPasswordResetEmail = async (email, firstName, resetToken) => {
     const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
     
     const mailOptions = {
-      from: `"Evolv Team" <${process.env.EMAIL_FROM || 'noreply@evolv.com'}>`,
+      from: `"Thryv Team" <${process.env.EMAIL_FROM || 'noreply@thryv.com'}>`,
       to: email,
-      subject: 'Reset Your Password - Evolv',
+      subject: 'Reset Your Password - Thryv',
       html: `
         <!DOCTYPE html>
         <html>
@@ -371,13 +371,13 @@ const sendPasswordResetEmail = async (email, firstName, resetToken) => {
         <body>
           <div class="container">
             <div class="header">
-              <div class="logo">Evolv</div>
+              <div class="logo">Thryv</div>
               <h1 style="color: #2B463C; margin-bottom: 10px;">Reset Your Password</h1>
             </div>
             
             <p>Hi ${firstName},</p>
             
-            <p>We received a request to reset your password for your Evolv account. If you made this request, click the button below to reset your password:</p>
+            <p>We received a request to reset your password for your Thryv account. If you made this request, click the button below to reset your password:</p>
             
             <div style="text-align: center;">
               <a href="${resetUrl}" class="button">Reset Password</a>
@@ -401,11 +401,11 @@ const sendPasswordResetEmail = async (email, firstName, resetToken) => {
             
             <p>For your security, never share this reset link with anyone. Our team will never ask for your password or reset link via email or phone.</p>
             
-            <p>Best regards,<br>The Evolv Security Team</p>
+            <p>Best regards,<br>The Thryv Security Team</p>
             
             <div class="footer">
               <p>This email was sent from an automated system. Please do not reply to this email.</p>
-              <p>© ${new Date().getFullYear()} Evolv. All rights reserved.</p>
+              <p>© ${new Date().getFullYear()} Thryv. All rights reserved.</p>
             </div>
           </div>
         </body>

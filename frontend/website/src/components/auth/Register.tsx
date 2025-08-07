@@ -127,7 +127,7 @@ const Register: React.FC = () => {
                 Create Account
               </h2>
               <p className="text-[#688F4E] text-sm">
-                Join Evolv for premium protein shakes
+                Join Thryv for premium protein shakes
               </p>
             </>
           ) : (

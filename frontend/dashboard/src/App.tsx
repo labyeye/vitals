@@ -5,6 +5,7 @@ import Overview from './components/Overview';
 import Customers from './components/Customers';
 import Orders from './components/Orders';
 import Products from './components/Products';
+import HeroManagement from './components/HeroManagement';
 import Marketing from './components/Marketing';
 import PromoCodes from './components/PromoCodes';
 import AddProduct from './components/AddProduct';
@@ -150,6 +151,8 @@ function DashboardApp() {
             }
           />
         );
+      case 'heroes':
+        return <HeroManagement />;
       case 'promo-codes':
         return <PromoCodes />;
       case 'analytics':

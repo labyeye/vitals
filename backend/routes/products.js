@@ -139,9 +139,29 @@ router.get('/bestsellers', async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(limit);
 
+    const transformedProducts = products.map(product => {
+      const prices = {};
+      // Get prices from variants if they exist
+      if (product.variants && product.variants.length > 0 && product.variants[0].prices) {
+        product.variants[0].prices.forEach(priceObj => {
+          prices[priceObj.size] = priceObj.price;
+        });
+      } else {
+        // Fallback to single price if no variants
+        prices[1] = product.price;
+      }
+    
+      return {
+        ...product.toObject(),
+        prices
+      };
+    });
+
     res.status(200).json({
       success: true,
-      data: products
+      data: {
+        products: transformedProducts
+      }
     });
   } catch (error) {
     console.error('Get best sellers error:', error);

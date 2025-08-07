@@ -213,7 +213,7 @@ export const paymentService = {
         key: razorpayKey,
         amount: orderData.data.amount,
         currency: orderData.data.currency,
-        name: 'Vitals Nutrition',
+        name: 'Thryv Nutrition',
         description: `Order #${orderData.data.orderNumber}`,
         order_id: orderData.data.orderId,
         handler: async (response: RazorpayResponse) => {

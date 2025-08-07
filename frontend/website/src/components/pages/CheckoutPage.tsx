@@ -258,7 +258,7 @@ const CheckoutPage: React.FC = () => {
             <div className="mb-6 p-4 bg-[#688F4E]/10 rounded-lg">
               <div className="flex items-center justify-center space-x-2 mb-2">
                 <Gift className="w-5 h-5 text-[#688F4E]" />
-                <span className="font-medium text-[#2B463C]">Evolv Points Earned!</span>
+                <span className="font-medium text-[#2B463C]">Thryv Points Earned!</span>
               </div>
               <p className="text-sm text-[#688F4E] font-bold">
                 +{Math.floor(orderData.order.total * (orderData.newTier === 'bronze' ? 0.10 :
@@ -718,7 +718,7 @@ const CheckoutPage: React.FC = () => {
 
                 {evolvPointsRedemption && evolvDiscountAmount > 0 && (
                   <div className="flex justify-between text-blue-600">
-                    <span>Evolv Points ({evolvPointsRedemption.pointsToRedeem} pts)</span>
+                    <span>Thryv Points ({evolvPointsRedemption.pointsToRedeem} pts)</span>
                     <span>-₹{evolvDiscountAmount.toFixed(0)}</span>
                   </div>
                 )}

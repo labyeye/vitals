@@ -17,7 +17,7 @@ const Reviews: React.FC = () => {
       id: 1,
       name: 'Akshay Golccha',
       role: 'Fitness Enthusiast',
-      comment: 'This is the best protein shake here in the market! After trying almost all protein brands, I found that Thryv tastes the least artificial and actually helps with my workouts.',
+      comment: 'This is the best protein shake here in the market! After trying almost all protein brands, I found that Vitals tastes the least artificial and actually helps with my workouts.',
       rating: 5,
       verified: true,
       productUsed: 'Chocolate Protein Shake'
@@ -35,7 +35,7 @@ const Reviews: React.FC = () => {
       id: 3,
       name: 'Rahul Mehta',
       role: 'Gym Trainer',
-      comment: 'I recommend Thryv to all my clients. Clean ingredients, great taste, and actually works. The 25g protein content is perfect for muscle building.',
+      comment: 'I recommend Vitals to all my clients. Clean ingredients, great taste, and actually works. The 25g protein content is perfect for muscle building.',
       rating: 5,
       verified: true,
       productUsed: 'Vanilla Protein Shake'
@@ -44,7 +44,7 @@ const Reviews: React.FC = () => {
       id: 4,
       name: 'Sneha Patel',
       role: 'Nutritionist',
-      comment: 'As a nutritionist, I\'m very particular about ingredients. Thryv impressed me with their transparency and quality. No added sugar is a huge plus.',
+      comment: 'As a nutritionist, I\'m very particular about ingredients. Vitals impressed me with their transparency and quality. No added sugar is a huge plus.',
       rating: 5,
       verified: true,
       productUsed: 'Coffee Protein Shake'
@@ -124,7 +124,7 @@ const Reviews: React.FC = () => {
             </h2>
           </div>
           <p className="text-lg text-white/80 max-w-2xl mx-auto">
-            Join thousands of satisfied customers who've made Thryv their daily nutrition choice
+            Join thousands of satisfied customers who've made Vitals their daily nutrition choice
           </p>
 
           {/* Trust Indicators */}

@@ -42,7 +42,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, items, onUpdateQuantity, o
   const [evolvPointsInput, setEvolvPointsInput] = useState('');
   const [showEvolvPointsInput, setShowEvolvPointsInput] = useState(false);
   
-  // Fetch user Evolv points when cart opens
+  // Fetch user Thryv points when cart opens
   useEffect(() => {
     if (isOpen) {
       fetchUserEvolvPoints();
@@ -201,7 +201,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, items, onUpdateQuantity, o
                     >
                       <Zap className="w-4 h-4" />
                       <span className="text-sm font-medium">
-                        Redeem Evolv Points ({userEvolvPoints} available)
+                        Redeem Thryv Points ({userEvolvPoints} available)
                       </span>
                     </button>
                   )}
@@ -273,7 +273,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, items, onUpdateQuantity, o
                     </div>
                   )}
                   <div className="text-xs text-gray-500">
-                    1 Evolv Point = ₹1 discount
+                    1 Thryv Point = ₹1 discount
                   </div>
                   <button
                     onClick={() => {
@@ -313,7 +313,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, items, onUpdateQuantity, o
                     <div className="flex items-center space-x-2">
                       <Zap className="w-4 h-4 text-blue-600" />
                       <span className="text-sm font-medium text-blue-800">
-                        {evolvPointsRedemption.pointsToRedeem} Evolv Points redeemed
+                        {evolvPointsRedemption.pointsToRedeem} Thryv Points redeemed
                       </span>
                     </div>
                     <button
@@ -345,7 +345,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, items, onUpdateQuantity, o
 
               {evolvPointsRedemption && (
                 <div className="flex justify-between text-blue-600">
-                  <span>Evolv Points Discount</span>
+                  <span>Thryv Points Discount</span>
                   <span>-₹{evolvDiscount.toFixed(0)}</span>
                 </div>
               )}

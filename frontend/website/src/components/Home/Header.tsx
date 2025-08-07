@@ -53,8 +53,8 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick }) => {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/20 bg-gradient-to-r from-[#466644] from-60% to-[#e8e2d0] to-100%">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-14 sm:h-16 md:h-18 lg:h-20">
+      <div className="w-full px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-14 sm:h-16 md:h-18 lg:h-20 relative">
           {/* Left Navigation (Desktop) */}
           <div className="hidden md:flex items-center flex-1">
             <nav className="flex items-center space-x-3 lg:space-x-4 xl:space-x-5">
@@ -91,16 +91,15 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick }) => {
             </nav>
           </div>
 
-          {/* Centered Logo with Vertical Text */}
-          <div className="flex items-center justify-center md:absolute md:left-1/2 md:transform md:-translate-x-1/2">
+          {/* Centered Logo */}
+          <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center">
             <a href="#home" className="flex items-center">
               <img
                 src={logo}
                 alt="Company Logo"
-                className="h-18 sm:h-16 md:h-22 lg:h-30 xl:h-40 w-auto"
+                className="h-20 sm:h-24 md:h-28 lg:h-32 xl:h-36 w-auto"
               />
             </a>
-            
           </div>
 
           {/* Right Navigation (Desktop) */}

@@ -25,7 +25,7 @@ const AboutPage: React.FC = () => {
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <div>
               <h3 className="text-2xl font-bold text-[#2B463C] mb-4">
-                Why We Started Evolv
+                Why We Started Thryv
               </h3>
               <p className="text-gray-600 mb-4">
                 We're three friends - Kushagra, Harsh, and Milan - who crossed
@@ -41,7 +41,7 @@ const AboutPage: React.FC = () => {
               <p className="text-gray-600">
                 Compare that to India, where fitness still feels like a "phase"
                 for most, not a foundation. That contrast stuck with us and
-                Evolv was born from that vision.
+                Thryv was born from that vision.
               </p>
             </div>
             <div className="bg-gradient-to-br from-[#B1D182] to-[#688F4E] rounded-2xl p-1">
@@ -103,7 +103,7 @@ const AboutPage: React.FC = () => {
                 A fitness enthusiast committed to clean eating and a vegetarian
                 diet, he knew that performance didn't stop at the gym. It
                 started with nutrition. Kushagra brings his passion for health
-                and wellness to every aspect of Evolv's product development.
+                and wellness to every aspect of Thryv's product development.
               </p>
             </div>
             <div className="lg:w-1/2 bg-gradient-to-br from-[#B1D182] to-[#688F4E] flex items-center justify-center min-h-[300px] lg:min-h-full">
@@ -165,7 +165,7 @@ const AboutPage: React.FC = () => {
                 of the conversation entirely.
               </p>
               <p className="text-gray-600 text-lg leading-relaxed mt-4">
-                At Evolv, Harsh is the engine behind the scenes — streamlining
+                At Thryv, Harsh is the engine behind the scenes — streamlining
                 supply chains, forecasting demand curves, and turning vision
                 into execution. Because fixing a nation's protein problem isn't
                 just about taste and marketing. It's about building a system

@@ -194,7 +194,7 @@ const ProfilePage: React.FC = () => {
       iconColor: "text-amber-600",
       icon: Star,
       benefits: [
-        "1% Evolv Points on every purchase",
+        "1% Thryv Points on every purchase",
         "Welcome bonus: 100 points",
         "Standard shipping rates",
         "Basic customer support"
@@ -211,7 +211,7 @@ const ProfilePage: React.FC = () => {
       iconColor: "text-gray-600",
       icon: Award,
       benefits: [
-        "2% Evolv Points on every purchase",
+        "2% Thryv Points on every purchase",
         "Priority customer support",
         "Free shipping on orders ₹500+",
         "Early access to new products",
@@ -229,7 +229,7 @@ const ProfilePage: React.FC = () => {
       iconColor: "text-yellow-600",
       icon: Crown,
       benefits: [
-        "3% Evolv Points on every purchase",
+        "3% Thryv Points on every purchase",
         "VIP customer support",
         "Free shipping on all orders",
         "Exclusive product launches",
@@ -353,7 +353,7 @@ const ProfilePage: React.FC = () => {
                 </h3>
                 <p className="text-white/90">
                   Tier Points: {userData.loyaltyPoints} |
-                  Evolv Points: {userData.evolvPoints}
+                  Thryv Points: {userData.evolvPoints}
                 </p>
               </div>
               <Crown className="w-12 h-12 text-white" />
@@ -509,7 +509,7 @@ const ProfilePage: React.FC = () => {
                     <div className="text-center p-4 bg-[#688F4E]/10 rounded-lg">
                       <Gift className="w-8 h-8 text-[#688F4E] mx-auto mb-2" />
                       <p className="text-2xl font-bold text-[#2B463C]">{userData.evolvPoints}</p>
-                      <p className="text-sm text-gray-600">Evolv Points</p>
+                      <p className="text-sm text-gray-600">Thryv Points</p>
                     </div>
                     <div className="text-center p-4 bg-[#688F4E]/10 rounded-lg">
                       <Crown className="w-8 h-8 text-[#688F4E] mx-auto mb-2" />

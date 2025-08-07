@@ -83,7 +83,7 @@ const AdminLogin: React.FC = () => {
             Admin Login
           </h2>
           <p className="text-[#688F4E] text-sm">
-            Access Evolv admin dashboard
+            Access Thryv admin dashboard
           </p>
         </div>
 

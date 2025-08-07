@@ -1,101 +1,152 @@
 import React, { useEffect, useState } from "react";
-import { ArrowRight, Play, Star, Award, Shield, Zap } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import heroService, { Hero } from "../../services/heroService";
 
-const Hero: React.FC = () => {
+const HeroComponent: React.FC = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
-
-  const slides = [
-    {
-      image:
-        "https://images.unsplash.com/photo-1550583724-b2692b85b150?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
-      
-    },
-    {
-      image:
-        "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
-      
-    },
-    {
-      image:
-        "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
-        
-      
-    },
-    {
-      image:
-        "https://images.unsplash.com/photo-1547592180-85f173990554?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
-      
-      
-      
-    },
-    {
-      image:
-        "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
-      
-      
-    },
-  ];
+  const [heroes, setHeroes] = useState<Hero[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>('');
 
   useEffect(() => {
-    setIsVisible(true);
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % slides.length);
-    }, 4000);
-    return () => clearInterval(interval);
+    const fetchHeroes = async () => {
+      try {
+        setLoading(true);
+        const heroData = await heroService.getActiveHeroes();
+        setHeroes(heroData);
+        setError('');
+      } catch (err: any) {
+        console.error('Failed to fetch heroes:', err);
+        setError('Failed to load hero slides');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHeroes();
   }, []);
+
+  useEffect(() => {
+    if (heroes.length > 0) {
+      setIsVisible(true);
+      const interval = setInterval(() => {
+        setCurrentSlide((prev) => (prev + 1) % heroes.length);
+      }, heroes[currentSlide]?.animationDuration || 4000);
+      return () => clearInterval(interval);
+    }
+  }, [heroes, currentSlide]);
+
+  if (loading) {
+    return (
+      <section className="relative h-screen flex items-center justify-center bg-gray-100">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
+      </section>
+    );
+  }
+
+  if (error || heroes.length === 0) {
+    return (
+      <section className="relative h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">
+            {error || 'No Hero Slides Available'}
+          </h2>
+          <p className="text-gray-600">
+            {error ? 'Please try again later.' : 'Please check back soon for updates.'}
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  const currentHero = heroes[currentSlide];
 
   return (
     <section
       id="home"
       className="relative h-64 sm:h-80 md:h-96 lg:h-[500px] xl:h-[600px] 2xl:h-[700px] flex items-center justify-center overflow-hidden"
     >
-      {/* Slider Container */}
       <div className="absolute inset-0 w-full h-full">
-        {slides.map((slide, index) => (
+        {heroes.map((hero, index) => (
           <div
-            key={index}
+            key={hero._id}
             className={`absolute inset-0 transition-opacity duration-1000 ${
               index === currentSlide ? "opacity-100" : "opacity-0"
             }`}
           >
             <img
-              src={slide.image}
-             
+              src={hero.image.url}
+              alt={hero.image.alt}
               className="w-full h-full object-cover"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = 'https://images.unsplash.com/photo-1550583724-b2692b85b150?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80';
+              }}
             />
           </div>
         ))}
       </div>
-
-      {/* Content Overlay */}
-      <div className="absolute inset-0 bg-black/30"></div>
-
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="flex flex-col items-center text-center">
-          {slides.map((slide, index) => (
-            <div
-              key={index}
-              className={`max-w-xs sm:max-w-md md:max-w-lg lg:max-w-2xl xl:max-w-3xl space-y-3 sm:space-y-4 md:space-y-5 lg:space-y-6 transition-all duration-1000 ${
-                index === currentSlide
-                  ? "opacity-100 translate-y-0"
-                  : "opacity-0 translate-y-10 absolute"
-              }`}
+          <div className="max-w-xs sm:max-w-md md:max-w-lg lg:max-w-2xl xl:max-w-3xl space-y-3 sm:space-y-4 md:space-y-5 lg:space-y-6">
+            <h1 
+              className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight"
+              style={{ color: currentHero?.textColor || '#ffffff' }}
             >
-              
-            </div>
-          ))}
+              {currentHero?.title}
+            </h1>
+            
+            <p 
+              className="text-sm sm:text-base md:text-lg lg:text-xl opacity-90 leading-relaxed"
+              style={{ color: currentHero?.textColor || '#ffffff' }}
+            >
+              {currentHero?.subtitle}
+            </p>
+
+            {currentHero?.description && (
+              <p 
+                className="text-xs sm:text-sm md:text-base opacity-80 leading-relaxed"
+                style={{ color: currentHero?.textColor || '#ffffff' }}
+              >
+                {currentHero.description}
+              </p>
+            )}
+
+            {currentHero?.ctaButton.enabled && (
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+                <a
+                  href={currentHero.ctaButton.link}
+                  className="group inline-flex items-center justify-center px-6 py-3 sm:px-8 sm:py-4 bg-orange-600 text-white font-semibold rounded-full hover:bg-orange-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                >
+                  {currentHero.ctaButton.text}
+                  <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
+                </a>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Scroll Indicator */}
-      <div className="absolute bottom-4 sm:bottom-6 md:bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
-        <div className="w-4 h-6 sm:w-5 sm:h-8 md:w-6 md:h-10 border-2 border-white rounded-full flex justify-center">
-          <div className="w-1 h-2 sm:h-3 bg-white rounded-full mt-1 sm:mt-2 animate-pulse"></div>
+      {/* Slide Indicators */}
+      {heroes.length > 1 && (
+        <div className="absolute bottom-4 sm:bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-2">
+          {heroes.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentSlide(index)}
+              className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full transition-all duration-300 ${
+                index === currentSlide
+                  ? "bg-white scale-125"
+                  : "bg-white/50 hover:bg-white/75"
+              }`}
+              aria-label={`Go to slide ${index + 1}`}
+            />
+          ))}
         </div>
-      </div>
+      )}
     </section>
   );
 };
 
-export default Hero;
+export default HeroComponent;

@@ -2,7 +2,8 @@ const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const Category = require('../models/Category');
 const User = require('../models/User');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 
 mongoose.connect(process.env.MONGODB_URI, {
@@ -32,6 +33,13 @@ const seedCategories = async (adminUserId) => {
             createdBy: adminUserId
         },
         {
+            name: 'Sachet Powders',
+            slug: 'sachet-powders',
+            description: 'Convenient single-serving protein powder sachets',
+            image: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f',
+            createdBy: adminUserId
+        },
+        {
             name: 'Variety Packs',
             slug: 'variety-packs',
             description: 'Try all our flavors in one convenient pack',
@@ -43,7 +51,8 @@ const seedCategories = async (adminUserId) => {
     const createdCategories = await Category.insertMany(categories);
     return {
         shakesCategory: createdCategories[0]._id,
-        varietyCategory: createdCategories[1]._id
+        sachetsCategory: createdCategories[1]._id,
+        varietyCategory: createdCategories[2]._id
     };
 };
 
@@ -53,19 +62,29 @@ const seedProducts = async (categoryIds, adminUserId) => {
 
     const products = [
         {
-            sku: 'VITAL-STRWB-001',
-            name: 'Vital Strawberry Protein Shake',
+            sku: 'THRYV-STRWB-001',
+            name: 'Thryv Strawberry Protein Shake',
             description: 'Your daily protein fix, dressed as a treat. Tastes like dessert, performs like a pro.',
             shortDescription: 'Strawberry flavored protein shake',
             price: 149,
             comparePrice: 179,
             category: categoryIds.shakesCategory,
-            brand: 'Vital',
+            brand: 'Thryv',
             images: [
                 {
-                    url: 'https://images.pexels.com/photos/1346347/pexels-photo-1346347.jpeg',
+                    url: 'https://ik.imagekit.io/os1mzoooe/Strawberry%20Shake.png?updatedAt=1754596021444',
                     alt: 'Strawberry Protein Shake',
                     isPrimary: true
+                },
+                {
+                    url: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop',
+                    alt: 'Strawberry Protein Shake - Side View',
+                    isPrimary: false
+                },
+                {
+                    url: 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=400&h=400&fit=crop',
+                    alt: 'Strawberry Protein Shake - Ingredients',
+                    isPrimary: false
                 }
             ],
             stock: {
@@ -101,26 +120,36 @@ const seedProducts = async (categoryIds, adminUserId) => {
                 height: 20
             },
             seo: {
-                title: 'Strawberry Protein Shake | Vital',
+                title: 'Strawberry Protein Shake | Thryv',
                 description: 'Premium strawberry protein shake with 25g complete protein',
                 keywords: ['protein', 'shake', 'strawberry', 'fitness']
             },
             createdBy: adminUserId
         },
         {
-            sku: 'VITAL-CHOCO-001',
-            name: 'Vital Chocolate Protein Shake',
+            sku: 'Thryv-CHOCO-001',
+            name: 'Thryv Chocolate Protein Shake',
             description: 'Classic flavour, smarter fuel. Rich taste of real cocoa with 25g of clean, complete protein.',
             shortDescription: 'Chocolate flavored protein shake',
             price: 149,
             comparePrice: 179,
             category: categoryIds.shakesCategory,
-            brand: 'Vital',
+            brand: 'Thryv',
             images: [
                 {
-                    url: 'https://images.pexels.com/photos/918327/pexels-photo-918327.jpeg',
+                    url: 'https://ik.imagekit.io/os1mzoooe/Chocolate%20Shake.png?updatedAt=1754596020886',
                     alt: 'Chocolate Protein Shake',
                     isPrimary: true
+                },
+                {
+                    url: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?w=400&h=400&fit=crop',
+                    alt: 'Chocolate Protein Shake - Side View',
+                    isPrimary: false
+                },
+                {
+                    url: 'https://images.unsplash.com/photo-1579954115545-a95591f28bfc?w=400&h=400&fit=crop',
+                    alt: 'Chocolate Protein Shake - Nutritional',
+                    isPrimary: false
                 }
             ],
             stock: {
@@ -156,24 +185,24 @@ const seedProducts = async (categoryIds, adminUserId) => {
                 height: 20
             },
             seo: {
-                title: 'Chocolate Protein Shake | Vital',
+                title: 'Chocolate Protein Shake | Thryv',
                 description: 'Premium chocolate protein shake with 25g complete protein',
                 keywords: ['protein', 'shake', 'chocolate', 'fitness']
             },
             createdBy: adminUserId
         },
         {
-            sku: 'VITAL-VANILLA-001',
-            name: 'Vital Vanilla Protein Shake',
+            sku: 'Thryv-VANILLA-001',
+            name: 'Thryv Vanilla Protein Shake',
             description: 'Simple doesn\'t mean boring. Smooth, balanced, and endlessly drinkable everyday essential.',
             shortDescription: 'Vanilla flavored protein shake',
             price: 149,
             comparePrice: 179,
             category: categoryIds.shakesCategory,
-            brand: 'Vital',
+            brand: 'Thryv',
             images: [
                 {
-                    url: 'https://images.pexels.com/photos/414262/pexels-photo-414262.jpeg',
+                    url: 'https://ik.imagekit.io/os1mzoooe/Vanilla%20Shake.png?updatedAt=1754596020601',
                     alt: 'Vanilla Protein Shake',
                     isPrimary: true
                 }
@@ -203,6 +232,7 @@ const seedProducts = async (categoryIds, adminUserId) => {
             tags: ['protein', 'shake', 'vanilla', 'fitness'],
             status: 'active',
             isFeatured: true,
+            isBestSeller: true,
             weight: 500,
             dimensions: {
                 length: 8,
@@ -210,24 +240,24 @@ const seedProducts = async (categoryIds, adminUserId) => {
                 height: 20
             },
             seo: {
-                title: 'Vanilla Protein Shake | Vital',
+                title: 'Vanilla Protein Shake | Thryv',
                 description: 'Premium vanilla protein shake with 25g complete protein',
                 keywords: ['protein', 'shake', 'vanilla', 'fitness']
             },
             createdBy: adminUserId
         },
         {
-            sku: 'VITAL-COFFEE-001',
-            name: 'Vital Coffee Protein Shake',
+            sku: 'Thryv-COFFEE-001',
+            name: 'Thryv Coffee Protein Shake',
             description: 'Your morning brew just got an upgrade. Daily protein and caffeine kick in one smooth bottle.',
             shortDescription: 'Coffee flavored protein shake',
             price: 159,
             comparePrice: 189,
             category: categoryIds.shakesCategory,
-            brand: 'Vital',
+            brand: 'Thryv',
             images: [
                 {
-                    url: 'https://images.pexels.com/photos/894695/pexels-photo-894695.jpeg',
+                    url: 'https://ik.imagekit.io/os1mzoooe/Coffee%20Shake.png?updatedAt=1754596021149',
                     alt: 'Coffee Protein Shake',
                     isPrimary: true
                 }
@@ -265,67 +295,122 @@ const seedProducts = async (categoryIds, adminUserId) => {
                 height: 20
             },
             seo: {
-                title: 'Coffee Protein Shake | Vital',
+                title: 'Coffee Protein Shake | Thryv',
                 description: 'Premium coffee protein shake with 25g complete protein and 100mg caffeine',
                 keywords: ['protein', 'shake', 'coffee', 'energy']
             },
             createdBy: adminUserId
         },
         {
-            sku: 'VITAL-VARIETY-001',
-            name: 'Vital Variety Pack',
-            description: 'All the flavours. All the functions. One pack. Perfect for those who can\'t pick just one.',
-            shortDescription: 'Variety pack with all flavors',
-            price: 599,
-            comparePrice: 699,
-            category: categoryIds.varietyCategory,
-            brand: 'Vital',
+            sku: 'THRYV-STRWB-SACHET-001',
+            name: 'Thryv Strawberry Protein Sachet',
+            description: 'Convenient single-serving strawberry protein powder. Perfect for on-the-go nutrition.',
+            shortDescription: 'Strawberry protein powder sachet',
+            price: 49,
+            comparePrice: 59,
+            category: categoryIds.sachetsCategory,
+            brand: 'Thryv',
             images: [
                 {
-                    url: 'https://images.pexels.com/photos/1346347/pexels-photo-1346347.jpeg',
-                    alt: 'Variety Pack',
+                    url: 'https://ik.imagekit.io/os1mzoooe/Gemini_Generated_Image_eqwraqeqwraqeqwr.png?updatedAt=1754596780461',
+                    alt: 'Strawberry Protein Sachet',
                     isPrimary: true
                 }
             ],
             stock: {
-                quantity: 100,
-                lowStockThreshold: 10,
+                quantity: 200,
+                lowStockThreshold: 20,
                 trackStock: true
             },
             variants: [
                 {
                   name: 'Pack Size',
-                  options: ['1', '6', '12', '24'],
+                  options: ['1', '5', '10', '30'],
                   prices: [
-                    { size: 1, price: 149 },
-                    { size: 6, price: 799 },
-                    { size: 12, price: 1499 },
-                    { size: 24, price: 2799 }
+                    { size: 1, price: 49 },
+                    { size: 5, price: 199 },
+                    { size: 10, price: 349 },
+                    { size: 30, price: 999 }
                   ]
                 }
-              ],
-            attributes: [
-                { name: 'Flavor', value: 'Mixed' },
-                { name: 'Protein', value: '25g' },
-                { name: 'Variety', value: 'All 4 flavors' }
             ],
-            tags: ['protein', 'shake', 'variety', 'sampler'],
+            attributes: [
+                { name: 'Flavor', value: 'Strawberry' },
+                { name: 'Protein', value: '25g' },
+                { name: 'Serving Size', value: '30g' },
+                { name: 'Format', value: 'Powder Sachet' }
+            ],
+            tags: ['protein', 'powder', 'sachet', 'strawberry', 'portable'],
             status: 'active',
             isFeatured: true,
-            isBestSeller: true,
-            weight: 2000,
+            weight: 30,
             dimensions: {
-                length: 15,
-                width: 15,
-                height: 20
+                length: 10,
+                width: 8,
+                height: 1
             },
             seo: {
-                title: 'Protein Shake Variety Pack | Vital',
-                description: 'Try all our premium protein shake flavors in one convenient pack',
-                keywords: ['protein', 'shake', 'variety', 'sampler']
+                title: 'Strawberry Protein Powder Sachet | Thryv',
+                description: 'Convenient single-serving strawberry protein powder sachet with 25g protein',
+                keywords: ['protein', 'powder', 'sachet', 'strawberry', 'portable']
             },
             createdBy: adminUserId
-        }
+        },
+        {
+            sku: 'THRYV-CHOCO-SACHET-001',
+            name: 'Thryv Chocolate Protein Sachet',
+            description: 'Rich chocolate protein powder in convenient single-serving sachets. Mix with water or milk.',
+            shortDescription: 'Chocolate protein powder sachet',
+            price: 49,
+            comparePrice: 59,
+            category: categoryIds.sachetsCategory,
+            brand: 'Thryv',
+            images: [
+                {
+                    url: 'https://ik.imagekit.io/os1mzoooe/Gemini_Generated_Image_5n3okc5n3okc5n3o.png?updatedAt=1754596780335',
+                    alt: 'Chocolate Protein Sachet',
+                    isPrimary: true
+                }
+            ],
+            stock: {
+                quantity: 200,
+                lowStockThreshold: 20,
+                trackStock: true
+            },
+            variants: [
+                {
+                  name: 'Pack Size',
+                  options: ['1', '5', '10', '30'],
+                  prices: [
+                    { size: 1, price: 49 },
+                    { size: 5, price: 199 },
+                    { size: 10, price: 349 },
+                    { size: 30, price: 999 }
+                  ]
+                }
+            ],
+            attributes: [
+                { name: 'Flavor', value: 'Chocolate' },
+                { name: 'Protein', value: '25g' },
+                { name: 'Serving Size', value: '30g' },
+                { name: 'Format', value: 'Powder Sachet' }
+            ],
+            tags: ['protein', 'powder', 'sachet', 'chocolate', 'portable'],
+            status: 'active',
+            isFeatured: true,
+            weight: 30,
+            dimensions: {
+                length: 10,
+                width: 8,
+                height: 1
+            },
+            seo: {
+                title: 'Chocolate Protein Powder Sachet | Thryv',
+                description: 'Rich chocolate protein powder sachet with 25g protein per serving',
+                keywords: ['protein', 'powder', 'sachet', 'chocolate', 'portable']
+            },
+            createdBy: adminUserId
+        },
     ];
 
     await Product.insertMany(products);

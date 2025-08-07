@@ -110,7 +110,7 @@ const VerifyEmailPage: React.FC = () => {
             <p className="text-gray-600 mb-6">{message}</p>
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
               <p className="text-green-800 text-sm">
-                🎉 Welcome to Vitals! You'll be redirected to the homepage in a few seconds.
+                🎉 Welcome to Thryv! You'll be redirected to the homepage in a few seconds.
               </p>
             </div>
             <button

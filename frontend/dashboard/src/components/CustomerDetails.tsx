@@ -242,7 +242,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customerId, onBack })
                     <span className="font-medium">{customer.loyaltyPoints || 0}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Evolv Points:</span>
+                    <span className="text-gray-600">Thryv Points:</span>
                     <span className="font-medium">{customer.evolvPoints || 0}</span>
                   </div>
                   <div className="flex justify-between">

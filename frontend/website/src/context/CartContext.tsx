@@ -192,7 +192,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setPromoCodeError(null);
   };
 
-  // Fetch user's current Evolv points
+  // Fetch user's current Thryv points
   const fetchUserEvolvPoints = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -209,7 +209,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         setUserEvolvPoints(data.data.evolvPoints || 0);
       }
     } catch (error) {
-      console.error('Error fetching user Evolv points:', error);
+      console.error('Error fetching user Thryv points:', error);
     }
   };
 
@@ -220,7 +220,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        throw new Error('Please login to redeem Evolv points');
+        throw new Error('Please login to redeem Thryv points');
       }
 
       // Clear promo code if applied (mutual exclusivity)
@@ -246,7 +246,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to apply Evolv points');
+        throw new Error(data.message || 'Failed to apply Thryv points');
       }
 
       setEvolvPointsRedemption(data.data);

@@ -26,7 +26,7 @@ const OrderSuccessAnimation = ({ orderData, onContinue }) => {
               <span className="font-medium text-[#2B463C]">Points Earned!</span>
             </div>
             <p className="text-sm text-[#688F4E] font-bold">
-              +{orderData.pointsEarned.tierPoints} Tier Points & +{orderData.pointsEarned.evolvPoints} Evolv Points
+              +{orderData.pointsEarned.tierPoints} Tier Points & +{orderData.pointsEarned.evolvPoints} Thryv Points
             </p>
             {orderData.newTier && (
               <p className="text-xs text-gray-600 mt-1">

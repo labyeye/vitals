@@ -228,7 +228,7 @@ const Footer: React.FC = () => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <div className="flex items-center space-x-2 text-white/80">
-              <span>&copy; {currentYear} Evolv Protein Shakes. All rights reserved.</span>
+              <span>&copy; {currentYear} Thryv Protein Shakes. All rights reserved.</span>
             </div>
             <div className="flex items-center space-x-6">
               <a href="#" className="text-white/80 hover:text-white text-sm transition-colors duration-200">

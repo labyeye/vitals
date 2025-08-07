@@ -3,13 +3,11 @@ const mongoose = require('mongoose');
 const heroSchema = new mongoose.Schema({
   title: {
     type: String,
-    required: [true, 'Hero title is required'],
     trim: true,
     maxlength: [100, 'Title cannot be more than 100 characters']
   },
   subtitle: {
     type: String,
-    required: [true, 'Hero subtitle is required'],
     trim: true,
     maxlength: [200, 'Subtitle cannot be more than 200 characters']
   },
@@ -32,13 +30,11 @@ const heroSchema = new mongoose.Schema({
   ctaButton: {
     text: {
       type: String,
-      required: [true, 'CTA button text is required'],
       trim: true,
       maxlength: [50, 'CTA text cannot be more than 50 characters']
     },
     link: {
       type: String,
-      required: [true, 'CTA button link is required'],
       trim: true
     },
     enabled: {

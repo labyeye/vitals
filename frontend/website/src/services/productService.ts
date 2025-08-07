@@ -9,6 +9,11 @@ export interface Product {
   flavor: string;
   description: string;
   image: string;
+  images: Array<{
+    url: string;
+    alt: string;
+    isPrimary: boolean;
+  }>;
   prices: Record<number, number>;
   features: string[];
   gradient: string;
@@ -32,6 +37,9 @@ export const getProducts = async (): Promise<Product[]> => {
       const flavorAttr = product.attributes?.find((attr: any) => attr.name === 'Flavor')?.value || '';
       const primaryImage = product.images?.find((img: any) => img.isPrimary)?.url || 
                          product.images?.[0]?.url || '';
+      
+      // Get all images or fallback to single image
+      const allImages = product.images || [];
 
       // Create price mapping from variants
       const priceObj: Record<number, number> = {};
@@ -56,6 +64,7 @@ export const getProducts = async (): Promise<Product[]> => {
         flavor: flavorAttr,
         description: product.description || '',
         image: primaryImage,
+        images: allImages,
         prices: priceObj,
         features,
         gradient: getGradient(flavorAttr),
@@ -127,6 +136,56 @@ export const getProductById = async (id: string): Promise<Product> => {
     throw error;
   }
 };
+
+// Get bestseller products
+export const getBestsellers = async (limit: number = 4): Promise<Product[]> => {
+  try {
+    const response = await axios.get(`${API_URL}/bestsellers?limit=${limit}`, {
+      timeout: 10000,
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+    
+    if (!response.data?.data?.products) {
+      throw new Error('Invalid API response structure');
+    }
+
+    return response.data.data.products.map((product: any) => {
+      const flavorAttr = product.attributes?.find((attr: any) => attr.name === 'Flavor')?.value || '';
+      const primaryImage = product.images?.find((img: any) => img.isPrimary)?.url || 
+                         product.images?.[0]?.url || '';
+
+      // Use the existing prices from the transformed product
+      const priceObj = product.prices || { 1: product.price };
+      
+      // Get all images or fallback to single image
+      const allImages = product.images || [];
+
+      const features = product.attributes?.map((attr: any) => 
+        `${attr.name}: ${attr.value}`
+      ) || [];
+
+      return {
+        _id: product._id,
+        id: product._id,
+        name: product.name,
+        flavor: flavorAttr,
+        description: product.description || product.shortDescription || '',
+        image: primaryImage,
+        images: allImages,
+        prices: priceObj,
+        features,
+        gradient: getGradient(flavorAttr),
+        bgGradient: getBgGradient(flavorAttr)
+      };
+    });
+  } catch (error) {
+    console.error('Error fetching bestsellers:', error);
+    throw error;
+  }
+};
+
 const getGradient = (flavor: string): string => {
   switch (flavor.toLowerCase()) {
     case 'strawberry':
