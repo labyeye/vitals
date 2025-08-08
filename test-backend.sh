@@ -30,15 +30,15 @@ sleep 5
 
 # Test health endpoint
 echo "🏥 Testing health endpoint..."
-curl -s http://localhost:3500/api/health | jq '.' || echo "Health check failed"
+curl -s https://vitals-iu4r.onrender.com/api/health | jq '.' || echo "Health check failed"
 
 # Test Razorpay key endpoint
 echo "🔐 Testing Razorpay key endpoint..."
-curl -s http://localhost:3500/api/payments/razorpay-key | jq '.' || echo "Razorpay key endpoint failed"
+curl -s https://vitals-iu4r.onrender.com/api/payments/razorpay-key | jq '.' || echo "Razorpay key endpoint failed"
 
 # Test heroes endpoint
 echo "🦸 Testing heroes endpoint..."
-curl -s http://localhost:3500/api/heroes | jq '.' || echo "Heroes endpoint failed"
+curl -s https://vitals-iu4r.onrender.com/api/heroes | jq '.' || echo "Heroes endpoint failed"
 
 echo ""
 echo "✅ Backend testing complete!"

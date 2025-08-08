@@ -37,9 +37,7 @@ app.use(cors({
     origin: [
       'http://localhost:5173', // Vite default for dashboard
       'http://localhost:5174', // Vite default for website (if used)
-      'http://localhost:3000', // React default (if used)
-      'http://127.0.0.1:5173',
-      'http://127.0.0.1:5174',
+      'http://localhost:3000',
       'https://vitals-theta.vercel.app'
     ],
     credentials: true,

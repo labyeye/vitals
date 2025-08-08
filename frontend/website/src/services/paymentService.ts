@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3500';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://vitals-iu4r.onrender.com';
 
 interface RazorpayOptions {
   key: string;

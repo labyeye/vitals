@@ -14,7 +14,7 @@ const ForgotPassword: React.FC = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:3500/api/auth/forgot-password', {
+      const response = await fetch('https://vitals-iu4r.onrender.com/api/auth/forgot-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -159,7 +159,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         total: item.price * item.quantity
       }));
 
-      const response = await fetch('http://localhost:3500/api/customer/validate-promo', {
+      const response = await fetch('https://vitals-iu4r.onrender.com/api/customer/validate-promo', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -198,7 +198,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await fetch('http://localhost:3500/api/customer/profile', {
+      const response = await fetch('https://vitals-iu4r.onrender.com/api/customer/profile', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -231,7 +231,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
       const subtotal = calculateSubtotal();
 
-      const response = await fetch('http://localhost:3500/api/customer/validate-evolv-points', {
+      const response = await fetch('https://vitals-iu4r.onrender.com/api/customer/validate-evolv-points', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

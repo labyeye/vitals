@@ -65,7 +65,7 @@ const ResetPassword: React.FC = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:3500/api/auth/reset-password', {
+      const response = await fetch('https://vitals-iu4r.onrender.com/api/auth/reset-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

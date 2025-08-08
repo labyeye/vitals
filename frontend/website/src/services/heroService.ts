@@ -22,7 +22,7 @@ export interface Hero {
 }
 
 class HeroService {
-  private baseURL = 'http://localhost:3500/api/heroes';
+  private baseURL = 'https://vitals-iu4r.onrender.com/api/heroes';
 
   async getActiveHeroes(): Promise<Hero[]> {
     try {

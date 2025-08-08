@@ -89,7 +89,7 @@ const ProfilePage: React.FC = () => {
 
     setSaving(true);
     try {
-      const response = await fetch('http://localhost:3500/api/customer/profile', {
+      const response = await fetch('https://vitals-iu4r.onrender.com/api/customer/profile', {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -126,7 +126,7 @@ const ProfilePage: React.FC = () => {
     formData.append('profileImage', file);
 
     try {
-      const response = await fetch('http://localhost:3500/api/auth/upload-profile-image', {
+      const response = await fetch('https://vitals-iu4r.onrender.com/api/auth/upload-profile-image', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -169,7 +169,7 @@ const ProfilePage: React.FC = () => {
       year: 'numeric' 
     }),
     avatar: user.profileImage 
-      ? `http://localhost:3500${user.profileImage}?t=${Date.now()}` // Direct static file serving
+      ? `https://vitals-iu4r.onrender.com${user.profileImage}?t=${Date.now()}` // Direct static file serving
       : "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80",
     totalOrders: orderStats?.total || 0,
     totalSpent: orderStats?.totalSpent || 0,
@@ -245,7 +245,7 @@ const ProfilePage: React.FC = () => {
         setOrdersLoading(true);
         setOrdersError('');
         try {
-          const response = await fetch('http://localhost:3500/api/customer/orders', {
+          const response = await fetch('https://vitals-iu4r.onrender.com/api/customer/orders', {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json',
@@ -268,7 +268,7 @@ const ProfilePage: React.FC = () => {
     if (user && token) {
       const fetchDashboardData = async () => {
         try {
-          const response = await fetch('http://localhost:3500/api/customer/dashboard', {
+          const response = await fetch('https://vitals-iu4r.onrender.com/api/customer/dashboard', {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           
