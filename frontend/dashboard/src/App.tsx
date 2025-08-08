@@ -8,7 +8,6 @@ import Products from './components/Products';
 import HeroManagement from './components/HeroManagement';
 import Marketing from './components/Marketing';
 import PromoCodes from './components/PromoCodes';
-import AddProduct from './components/AddProduct';
 import ProductDetails from './components/ProductDetails';
 import CustomerDetails from './components/CustomerDetails';
 import OrderDetails from './components/OrderDetails';
@@ -51,18 +50,6 @@ function DashboardApp() {
 
   const renderContent = () => {
     // Handle detailed views
-    if (currentView.view === 'add' && currentView.section === 'products') {
-      return (
-        <AddProduct
-          onBack={() => setCurrentView({ section: 'products', view: 'list' })}
-          onSave={(product) => {
-            console.log('Saving product:', product);
-            setCurrentView({ section: 'products', view: 'list' });
-          }}
-        />
-      );
-    }
-
     if (currentView.view === 'details') {
       switch (currentView.section) {
         case 'products':
@@ -137,7 +124,6 @@ function DashboardApp() {
       case 'products':
         return (
           <Products
-            onAddProduct={() => setCurrentView({ section: 'products', view: 'add' })}
             onViewDetails={(productId) => 
               setCurrentView({ section: 'products', view: 'details', itemId: productId })
             }

@@ -1,5 +1,6 @@
 import React from "react";
 import { ArrowRight, Zap, Droplets, Package } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const ProductRange: React.FC = () => {
   const categories = [
@@ -90,10 +91,13 @@ const ProductRange: React.FC = () => {
                     </div>
                     
                     {/* CTA Button */}
-                    <button className="inline-flex items-center space-x-2 text-[#688F4E] font-semibold group-hover:text-[#2B463C] transition-colors">
+                    <Link
+                      to={category.link}
+                      className="inline-flex items-center space-x-2 text-[#688F4E] font-semibold group-hover:text-[#2B463C] transition-colors"
+                    >
                       <span>Explore Range</span>
                       <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                    </button>
+                    </Link>
                   </div>
                 </div>
               </div>

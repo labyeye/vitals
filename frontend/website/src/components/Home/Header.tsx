@@ -93,13 +93,13 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick }) => {
 
           {/* Centered Logo */}
           <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center">
-            <a href="#home" className="flex items-center">
+            <Link to="/" className="flex items-center">
               <img
                 src={logo}
                 alt="Company Logo"
                 className="h-20 sm:h-24 md:h-28 lg:h-32 xl:h-36 w-auto"
               />
-            </a>
+            </Link>
           </div>
 
           {/* Right Navigation (Desktop) */}

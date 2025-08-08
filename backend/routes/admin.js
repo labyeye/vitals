@@ -3,6 +3,7 @@ const { body, validationResult } = require('express-validator');
 const { protect, isAdmin } = require('../middleware/auth');
 const User = require('../models/User');
 const Product = require('../models/Product');
+const Category = require('../models/Category');
 const Order = require('../models/Order');
 const PromoCode = require('../models/PromoCode');
 
@@ -600,6 +601,16 @@ router.post('/products', [
       });
     }
 
+    // Handle category - if it's a string, find or create the category
+    if (req.body.category && typeof req.body.category === 'string') {
+      let category = await Category.findOne({ name: req.body.category });
+      if (!category) {
+        category = new Category({ name: req.body.category });
+        await category.save();
+      }
+      req.body.category = category._id;
+    }
+
     const productData = {
       ...req.body,
       createdBy: req.user._id
@@ -621,6 +632,35 @@ router.post('/products', [
   }
 });
 
+// @desc    Get single product
+// @route   GET /api/admin/products/:id
+// @access  Admin only
+router.get('/products/:id', async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id)
+      .populate('category', 'name')
+      .populate('variants.prices');
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: product
+    });
+  } catch (error) {
+    console.error('Error fetching product:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching product'
+    });
+  }
+});
+
 // @desc    Update product
 // @route   PUT /api/admin/products/:id
 // @access  Admin only
@@ -632,6 +672,16 @@ router.put('/products/:id', async (req, res) => {
         success: false,
         message: 'Product not found'
       });
+    }
+
+    // Handle category - if it's a string, find or create the category
+    if (req.body.category && typeof req.body.category === 'string') {
+      let category = await Category.findOne({ name: req.body.category });
+      if (!category) {
+        category = new Category({ name: req.body.category });
+        await category.save();
+      }
+      req.body.category = category._id;
     }
 
     // Update product

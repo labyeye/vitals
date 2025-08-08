@@ -25,7 +25,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ isVisible, onClose }) => {
     onClose();
     
     // Show success message (you can integrate with your notification system)
-    alert('Welcome to Vitals! Check your email for exclusive offers.');
+    alert('Welcome to Thryv! Check your email for exclusive offers.');
   };
 
   if (!isVisible) return null;
@@ -47,7 +47,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ isVisible, onClose }) => {
             <Gift className="w-16 h-16 mx-auto mb-4 text-white" />
           </div>
           <h2 className="text-2xl font-bold mb-2">
-            Welcome to Vitals! 🎉
+            Welcome to Thryv! 🎉
           </h2>
           <p className="text-white/90">
             Join thousands who've transformed their nutrition

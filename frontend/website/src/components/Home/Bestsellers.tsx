@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Star, TrendingUp, Award } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 import { Product, getBestsellers } from "../../services/productService";
+import ProductCard from "./ProductCard";
 
 interface BestsellersProps {
   onAddToCart: (productId: string, quantity: number, packSize: number) => void;
@@ -97,78 +98,20 @@ const Bestsellers: React.FC<BestsellersProps> = ({ onAddToCart }) => {
 
         {/* Products Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          {bestsellerProducts.map((product) => (
-            <div 
-              key={product.id} 
-              className="bg-white rounded-2xl shadow-lg border border-[#B1D182]/20 overflow-hidden hover:shadow-2xl hover:scale-105 transition-all duration-300 group"
+          {bestsellerProducts.map((product, index) => (
+            <div
+              key={product.id}
+              className="transform transition-all duration-700"
+              style={{
+                animationDelay: `${index * 100}ms`,
+                animation: "fadeInUp 0.6s ease-out forwards",
+              }}
             >
-              {/* Bestseller Badge */}
-              <div className="relative">
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-300"
-                />
-                <div className="absolute top-3 left-3 bg-[#688F4E] text-white px-3 py-1 rounded-full text-sm font-semibold flex items-center space-x-1">
-                  <Award className="w-4 h-4" />
-                  <span>Bestseller</span>
-                </div>
-              </div>
-
-              <div className="p-6">
-                <h3 className="text-xl font-bold text-[#2B463C] mb-2 line-clamp-2">
-                  {product.name}
-                </h3>
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                  {product.description}
-                </p>
-
-                {/* Rating */}
-                <div className="flex items-center space-x-1 mb-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className={`w-4 h-4 ${i < 4 ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
-                    />
-                  ))}
-                  <span className="text-sm text-gray-600 ml-2">(128 reviews)</span>
-                </div>
-
-                {/* Pricing */}
-                <div className="flex items-center space-x-2 mb-4">
-                  <span className="text-2xl font-bold text-[#688F4E]">
-                    ₹{Math.round(product.prices[1] * 0.75)}
-                  </span>
-                  <span className="text-lg text-gray-500 line-through">
-                    ₹{product.prices[1]}
-                  </span>
-                  <span className="text-sm text-red-600 font-semibold bg-red-100 px-2 py-1 rounded">
-                    25% OFF
-                  </span>
-                </div>
-
-                {/* Pack Size Selection */}
-                <div className="mb-4">
-                  <div className="grid grid-cols-2 gap-2">
-                    {Object.entries(product.prices).slice(0, 2).map(([size, price]) => (
-                      <button
-                        key={size}
-                        className="text-xs border border-[#B1D182] rounded-lg px-2 py-1 hover:bg-[#688F4E] hover:text-white transition-colors"
-                      >
-                        {size} pack - ₹{Math.round(price * 0.75)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Add to Cart Button */}
-                <button
-                  onClick={() => onAddToCart(product.id, 1, 1)}
-                  className="w-full bg-gradient-to-r from-[#688F4E] to-[#2B463C] text-white py-3 rounded-xl font-semibold hover:shadow-lg hover:scale-105 transition-all duration-300 flex items-center justify-center space-x-2"
-                >
-                  <span>Add to Cart</span>
-                </button>
-              </div>
+              <ProductCard
+                product={product}
+                onAddToCart={onAddToCart}
+                viewDetailsLink={`/product/${product.id}`}
+              />
             </div>
           ))}
         </div>

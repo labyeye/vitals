@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
+import ScrollToTop from "./components/ScrollToTop";
 import { AuthProvider } from "./context/AuthContext";
 import { CartProvider, useCartContext } from './context/CartContext';
 import Header from "./components/Home/Header";
@@ -28,6 +29,7 @@ function App() {
     <AuthProvider>
       <CartProvider>
         <Router>
+          <ScrollToTop />
           <div className="min-h-screen bg-white">
             <HeaderWithCartCount onCartClick={() => setIsCartOpen(true)} />
             <Routes>

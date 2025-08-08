@@ -65,7 +65,7 @@ const HeroComponent: React.FC = () => {
   return (
     <section
       id="home"
-      className="relative h-64 sm:h-80 md:h-96 lg:h-[500px] xl:h-[600px] 2xl:h-[700px] flex items-center justify-center overflow-hidden"
+      className="relative h-[95vh] sm:h-[95vh] md:h-[100vh] lg:h-[100vh] xl:h-[100vh] 2xl:h-[100vh] min-h-[600px] max-h-[1000px] flex items-center justify-center overflow-hidden mt-35"
     >
       <div className="absolute inset-0 w-full h-full">
         {heroes.map((hero, index) => (
@@ -78,7 +78,7 @@ const HeroComponent: React.FC = () => {
             <img
               src={hero.image.url}
               alt={hero.image.alt}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover object-center"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.src = 'https://images.unsplash.com/photo-1550583724-b2692b85b150?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80';

@@ -103,6 +103,9 @@ export const getProductById = async (id: string): Promise<Product> => {
     const primaryImage = product.images?.find((img: any) => img.isPrimary)?.url || 
                        product.images?.[0]?.url || '';
 
+    // Get all images or fallback to single image
+    const allImages = product.images || [];
+
     // Create price mapping from variants
     const priceObj: Record<number, number> = {};
     
@@ -126,6 +129,7 @@ export const getProductById = async (id: string): Promise<Product> => {
       flavor: flavorAttr,
       description: product.description || '',
       image: primaryImage,
+      images: allImages,
       prices: priceObj,
       features,
       gradient: getGradient(flavorAttr),
