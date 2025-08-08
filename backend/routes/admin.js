@@ -1,3 +1,9 @@
+// ...existing code...
+
+// @desc    Get all orders for a specific customer
+// @route   GET /api/admin/users/:id/orders
+// @access  Admin only
+
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { protect, isAdmin } = require('../middleware/auth');
@@ -15,6 +21,21 @@ router.use(protect, isAdmin);
 // @desc    Get admin dashboard stats
 // @route   GET /api/admin/dashboard
 // @access  Admin only
+router.get('/users/:id/orders', async (req, res) => {
+  try {
+    const customerId = req.params.id;
+    const orders = await Order.find({ customer: customerId })
+      .populate('items.product', 'name')
+      .sort({ createdAt: -1 });
+    res.json({
+      success: true,
+      data: { orders }
+    });
+  } catch (error) {
+    console.error('Error fetching customer orders:', error);
+    res.status(500).json({ success: false, message: 'Error fetching customer orders' });
+  }
+});
 router.get('/dashboard', async (req, res) => {
   try {
     // Get total counts

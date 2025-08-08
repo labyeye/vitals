@@ -39,6 +39,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customerId, onBack })
   const { token } = useAuth();
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [stats, setStats] = useState<CustomerStats | null>(null);
+  const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -74,6 +75,24 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customerId, onBack })
     };
 
     fetchCustomerDetails();
+    // Fetch customer orders
+    const fetchOrders = async () => {
+      if (!token || !customerId) return;
+      try {
+        const response = await fetch(`https://vitals-iu4r.onrender.com/api/admin/users/${customerId}/orders`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        if (!response.ok) throw new Error('Failed to fetch orders');
+        const data = await response.json();
+        setOrders(data.data.orders || []);
+      } catch (err) {
+        console.error('Order fetch error:', err);
+      }
+    };
+    fetchOrders();
   }, [token, customerId]);
 
   const getSegmentColor = (tier: string) => {
@@ -207,6 +226,45 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ customerId, onBack })
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Order History */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">Order History</h3>
+            {orders.length === 0 ? (
+              <p className="text-gray-500">No orders found for this customer.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Order #</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Items</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {orders.map(order => (
+                      <tr key={order._id}>
+                        <td className="px-4 py-2 text-sm text-blue-700 font-semibold">{order.orderNumber}</td>
+                        <td className="px-4 py-2 text-sm">{new Date(order.createdAt).toLocaleDateString()}</td>
+                        <td className="px-4 py-2 text-sm">₹{order.total?.toFixed(2) || order.subtotal?.toFixed(2) || '0.00'}</td>
+                        <td className="px-4 py-2 text-sm capitalize">{order.status || 'N/A'}</td>
+                        <td className="px-4 py-2 text-sm">
+                          {order.items.map((item: any, idx: number) => (
+                            <div key={idx} className="mb-1">
+                              {item.product?.name || 'Product'} x{item.quantity} (₹{item.price})
+                            </div>
+                          ))}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           {/* Loyalty Information */}

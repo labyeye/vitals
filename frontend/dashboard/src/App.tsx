@@ -66,16 +66,13 @@ function DashboardApp() {
           }
           break;
         case 'customers':
-          const customer = mockData.customers.find(c => c.id === currentView.itemId);
-          if (customer) {
-            return (
-              <CustomerDetails
-                customerId={currentView.itemId || ''}
-                onBack={() => setCurrentView({ section: 'customers', view: 'list' })}
-              />
-            );
-          }
-          break;
+          console.log('Rendering CustomerDetails for customerId:', currentView.itemId);
+          return (
+            <CustomerDetails
+              customerId={currentView.itemId || ''}
+              onBack={() => setCurrentView({ section: 'customers', view: 'list' })}
+            />
+          );
         case 'orders':
           const order = mockData.orders.find(o => o.id === currentView.itemId);
           if (order) {

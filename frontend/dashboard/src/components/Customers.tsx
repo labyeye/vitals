@@ -296,7 +296,10 @@ const Customers: React.FC<CustomersProps> = ({ onViewDetails }) => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                         <button
-                          onClick={() => onViewDetails(customer._id)}
+                          onClick={() => {
+                            console.log('View Details clicked for customer:', customer._id);
+                            onViewDetails(customer._id);
+                          }}
                           className="text-blue-600 hover:text-blue-900"
                           title="View Details"
                         >
