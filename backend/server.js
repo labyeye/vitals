@@ -39,7 +39,7 @@ app.use(cors({
       'http://localhost:5174', // Vite default for website (if used)
       'http://localhost:3000',
       'https://vitals-theta.vercel.app',
-      'https://www.shopthryv.in/'
+      'https://www.shopthryv.in'
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'],
